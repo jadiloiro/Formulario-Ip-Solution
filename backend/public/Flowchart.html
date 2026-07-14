@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor Visual do Fluxo - IP Solution</title>
+
+    <!-- Drawflow: biblioteca open-source de editores de fluxo por nós -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js"></script>
+
+    <link rel="stylesheet" href="flowchart.css">
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+
+    <!-- ===================== Barra superior ===================== -->
+    <header class="fc-topbar">
+        <div class="fc-topbar-left">
+            <a href="index.html" class="fc-back-link" title="Voltar ao formulário de configuração">←</a>
+            <div class="fc-title-block">
+                <h1>Editor Visual do Fluxo do BOT</h1>
+                <span class="fc-autosave" id="autosaveStatus">Alterações salvas automaticamente</span>
+            </div>
+        </div>
+        <div class="fc-topbar-right">
+            <button type="button" class="fc-btn fc-btn-outline" id="refreshDataBtn" title="Buscar novamente Filas, Agentes e Horários do formulário">🔄 <span class="fc-btn-label">Atualizar dados</span></button>
+            <button type="button" class="fc-btn fc-btn-outline" id="copySummaryBtn" title="Copiar um resumo em texto do fluxo montado">📋 <span class="fc-btn-label">Copiar resumo</span></button>
+            <button type="button" class="fc-btn fc-btn-outline" id="exportJsonBtn" title="Baixar o fluxo em arquivo JSON">⬇ <span class="fc-btn-label">Exportar</span></button>
+            <button type="button" class="fc-btn fc-btn-ghost fc-btn-danger" id="clearCanvasBtn" title="Limpar todos os blocos e conexões" aria-label="Limpar quadro">🗑</button>
+            <span class="fc-divider"></span>
+            <button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema claro/escuro">
+                <span class="theme-toggle-icon">🌙</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="fc-layout">
+        <!-- ===================== Barra lateral ===================== -->
+        <aside class="fc-sidebar">
+
+            <details class="fc-help" open>
+                <summary>Como montar o fluxo</summary>
+                <ol class="fc-help-list">
+                    <li>O bloco <strong>Início</strong> dispara quando o cliente envia a primeira mensagem.</li>
+                    <li>Adicione ações pela <strong>paleta à direita</strong> (clique ou arraste para o quadro).</li>
+                    <li>Conecte puxando a <strong>bolinha laranja</strong> de um bloco até a entrada de outro. No <strong>Menu</strong>, cada opção tem a própria saída.</li>
+                    <li>Selecione um bloco ou linha e pressione <strong>Delete</strong> para remover. <strong>Ctrl + rolagem</strong> = zoom.</li>
+                </ol>
+            </details>
+
+            <div class="fc-sidebar-section">
+                <h2 class="fc-section-title">Filas do formulário <span class="fc-count-badge" id="filasCount">0</span></h2>
+                <p class="fc-sidebar-hint" id="filasEmptyHint">Nenhuma fila encontrada. Cadastre filas no Passo 1 do formulário e clique em "Atualizar dados".</p>
+                <div class="fc-palette-list" id="filasPaletteList"></div>
+                <p class="fc-sidebar-hint" id="filasClickHint" style="margin-top:8px;">💡 Clique numa fila para criar um bloco "Transferir" já configurado.</p>
+            </div>
+
+            <div class="fc-sidebar-section fc-validation-section">
+                <h2 class="fc-section-title">Verificações <span class="fc-count-badge fc-count-warn hidden" id="validationCount">0</span></h2>
+                <ul class="fc-validation-list" id="validationList"></ul>
+            </div>
+
+        </aside>
+
+        <!-- ===================== Quadro (Drawflow) ===================== -->
+        <main class="fc-viewport" id="fcViewport">
+            <div id="drawflow"></div>
+
+            <!-- Paleta flutuante de ações (estilo construtor de chatbot) -->
+            <nav class="fc-action-palette" id="actionPalette" aria-label="Ações do fluxo">
+                <button type="button" class="fc-action" draggable="true" data-node-type="menu" title="Menu de opções: o cliente digita um número e cada opção tem sua própria saída">
+                    <span class="fc-action-icon">☷</span><span class="fc-action-label">Menu</span>
+                </button>
+                <button type="button" class="fc-action" draggable="true" data-node-type="mensagem" title="Enviar uma mensagem ao cliente">
+                    <span class="fc-action-icon">💬</span><span class="fc-action-label">Mensagem</span>
+                </button>
+                <button type="button" class="fc-action" draggable="true" data-node-type="entrada" title="Fazer uma pergunta e aguardar a resposta do cliente">
+                    <span class="fc-action-icon">⇥</span><span class="fc-action-label">Entrada</span>
+                </button>
+                <button type="button" class="fc-action" draggable="true" data-node-type="condicao" title="Ramifica o fluxo: dentro ou fora do horário de atendimento (Passo 3)">
+                    <span class="fc-action-icon">⑂</span><span class="fc-action-label">Condição</span>
+                </button>
+                <button type="button" class="fc-action" draggable="true" data-node-type="aguardar" title="Pausar o fluxo por alguns minutos">
+                    <span class="fc-action-icon">🕐</span><span class="fc-action-label">Aguardar</span>
+                </button>
+                <button type="button" class="fc-action" draggable="true" data-node-type="transferir" title="Transferir o cliente para uma fila de atendimento humano">
+                    <span class="fc-action-icon">📥</span><span class="fc-action-label">Transferir</span>
+                </button>
+                <button type="button" class="fc-action" draggable="true" data-node-type="encerrar" title="Encerrar o atendimento com a mensagem de fim de sessão (Passo 4)">
+                    <span class="fc-action-icon">⏻</span><span class="fc-action-label">Encerrar</span>
+                </button>
+            </nav>
+
+            <div class="fc-zoombar fc-zoombar-vertical">
+                <button type="button" id="zoomInBtn" title="Aumentar zoom" aria-label="Aumentar zoom">+</button>
+                <button type="button" id="zoomOutBtn" title="Reduzir zoom" aria-label="Reduzir zoom">−</button>
+                <button type="button" id="zoomResetBtn" title="Restaurar zoom para 100%">⛶</button>
+            </div>
+
+            <div class="fc-sync-pill" id="syncStatus">Sincronizado com o formulário</div>
+
+            <!-- Fallback: a biblioteca vem de CDN e exige internet -->
+            <div class="fc-offline-overlay hidden" id="offlineOverlay">
+                <div class="fc-offline-card">
+                    <span class="fc-offline-icon">📡</span>
+                    <strong>O editor visual precisa de internet</strong>
+                    <p>A biblioteca do quadro (Drawflow) é carregada online e não pôde ser baixada. Verifique sua conexão e recarregue a página.</p>
+                    <a href="index.html" class="fc-btn fc-btn-outline">← Voltar ao formulário</a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="fc-toast-container" id="fcToastContainer" aria-live="polite"></div>
+
+    <script src="flowchart.js"></script>
+</body>
+</html>
