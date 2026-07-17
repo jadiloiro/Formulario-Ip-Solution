@@ -332,22 +332,30 @@ function nextStep() {
     if (!validateStep(currentStep)) return;
 
     completedSteps.add(currentStep);
+
+    // Passo 4 — avalia o estado da cascata ao avançar
+    if (currentStep === 4) {
+        checkConfigCascade();
+    }
+
     if (currentStep < totalSteps) {
         currentStep++;
         showStep(currentStep);
         updateFilasDropdowns();
     } else {
-        // Última etapa concluída: progresso chega de fato a 100%
+        // Última etapa: salva, envia para a API e gera o documento Word
         updateProgress(currentStep);
+        const draft = collectDraft();
         saveDraftNow();
+        gerarDocumentoLevantamento(draft);
         if (apiCtx.available) {
-            finalizeSubmission(collectDraft()).then(ok => {
+            finalizeSubmission(draft).then(ok => {
                 showToast(ok
-                    ? 'Levantamento enviado para a IP Solution com sucesso! 🎉'
-                    : 'Concluído e salvo localmente — mas o envio ao servidor falhou. Tente novamente.', ok ? 'success' : 'error');
+                    ? 'Levantamento enviado e documento Word gerado! 🎉'
+                    : 'Documento gerado! Mas o envio ao servidor falhou — tente novamente.', ok ? 'success' : 'error');
             });
         } else {
-            showToast('Tudo pronto! Formulário concluído e salvo neste navegador. 🎉', 'success');
+            showToast('Formulário concluído! Documento Word gerado e baixado. 🎉', 'success');
         }
     }
 }
@@ -1082,6 +1090,388 @@ function collectDraft() {
     };
 }
 
+/* ========================= Gerador do Documento Word (client-side via CDN) =========================
+   Usa a biblioteca docx.js carregada no <head>. Gera o levantamento preenchido
+   e o oferece para download direto no navegador — sem precisar do servidor. */
+
+function gerarDocumentoLevantamento(draft) {
+    if (typeof docx === 'undefined') {
+        showToast('A biblioteca de geração do Word não carregou. Verifique sua conexão e tente novamente.', 'error');
+        return;
+    }
+
+    const {
+        Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+        HeadingLevel, AlignmentType, WidthType, BorderStyle, ShadingType, PageBreak
+    } = docx;
+
+    const AZUL    = '002B5E';
+    const LARANJA = 'E85D04';
+    const CINZA   = 'F4F7F9';
+    const BRANCO  = 'FFFFFF';
+    const BORDA   = 'D0D7E0';
+    const TEXTO   = '333333';
+
+    const MSG_PADRAO = {
+        saudacaoAgente:   'Olá, você está falando com o(a) *Nome do Agente*, em que posso ajudar?',
+        msgFilaVazia:     'Nenhum especialista está disponível no momento! Deixe seu recado que em breve retornamos',
+        msgOpcaoInvalida: 'Opção digitada é inválida, digite uma das opções enviadas anteriormente.',
+        msgFimSessao:     'A *Nome da Empresa* agradece o seu contato. Não é necessário responder a essa mensagem. Protocolo: @@PROTOCOLO@@',
+        msgTransferencia: 'Seu atendimento foi transferido para o especialista responsável, obrigado(a).',
+        msgSemInteracao:  'Sua mensagem foi finalizada por falta de interação.',
+        msgTentativas:    'Você excedeu a quantidade de tentativas. Por favor, aguarde um atendente.'
+    };
+
+    const MSG_TITULO = {
+        saudacaoAgente:   'Saudação do agente',
+        msgFilaVazia:     'Nenhum agente disponível',
+        msgOpcaoInvalida: 'Opção inválida',
+        msgFimSessao:     'Fim de atendimento',
+        msgTransferencia: 'Transferência de atendimento',
+        msgSemInteracao:  'Encerramento por inatividade',
+        msgTentativas:    'Tentativas excedidas'
+    };
+
+    const noBorder = () => ({ style: BorderStyle.NONE, size: 0, color: BRANCO });
+    const sideBorder = (show) => show
+        ? { style: BorderStyle.SINGLE, size: 4, color: BORDA }
+        : noBorder();
+
+    function cellBorder(t, r, b, l) {
+        return { top: sideBorder(t), right: sideBorder(r), bottom: sideBorder(b), left: sideBorder(l) };
+    }
+
+    function run(text, opts = {}) {
+        return new TextRun({ text: String(text || ''), font: 'Segoe UI', size: 20, color: TEXTO, ...opts });
+    }
+
+    function h1(text) {
+        return new Paragraph({
+            heading: HeadingLevel.HEADING_1,
+            children: [run(text, { bold: true, size: 28, color: AZUL })],
+            spacing: { before: 400, after: 200 },
+            border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: LARANJA } },
+            shading: { type: ShadingType.CLEAR, fill: CINZA }
+        });
+    }
+
+    function h2(text) {
+        return new Paragraph({
+            heading: HeadingLevel.HEADING_2,
+            children: [run(text, { bold: true, size: 22, color: AZUL })],
+            spacing: { before: 280, after: 120 }
+        });
+    }
+
+    function lv(label, valor) {
+        return new Paragraph({
+            children: [run(label + ': ', { bold: true, color: AZUL }), run(valor || '(não informado)', { color: valor ? TEXTO : '999999' })],
+            spacing: { after: 100 }
+        });
+    }
+
+    function opt(label, valor) {
+        return new Paragraph({
+            children: [run('✓  ', { bold: true, color: LARANJA }), run(label + ': ', { bold: true, color: AZUL }), run(valor)],
+            spacing: { after: 100 }
+        });
+    }
+
+    function makeTable(headers, rows, colWidths) {
+        const total = colWidths.reduce((a, b) => a + b, 0);
+        return new Table({
+            width: { size: total, type: WidthType.DXA },
+            columnWidths: colWidths,
+            rows: [
+                new TableRow({
+                    tableHeader: true,
+                    children: headers.map((h, i) => new TableCell({
+                        children: [new Paragraph({ children: [run(h, { bold: true, color: BRANCO, size: 18 })] })],
+                        width: { size: colWidths[i], type: WidthType.DXA },
+                        shading: { type: ShadingType.CLEAR, fill: AZUL },
+                        borders: cellBorder(false, false, false, false),
+                        margins: { top: 80, bottom: 80, left: 120, right: 120 }
+                    }))
+                }),
+                ...rows.map((row, ri) => new TableRow({
+                    children: row.map((cell, ci) => new TableCell({
+                        children: [new Paragraph({ children: [run(cell, { size: 18 })] })],
+                        width: { size: colWidths[ci], type: WidthType.DXA },
+                        shading: { type: ShadingType.CLEAR, fill: ri % 2 === 0 ? BRANCO : CINZA },
+                        borders: cellBorder(false, false, true, false),
+                        margins: { top: 80, bottom: 80, left: 120, right: 120 }
+                    }))
+                }))
+            ]
+        });
+    }
+
+    const clientName = draft.bot && draft.bot.mensagemInicial ? '' : '';
+    const dataHoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    // ── 00 Capa ──────────────────────────────────────────────────────────
+    const capa = [
+        new Paragraph({
+            children: [run('IP Solution', { bold: true, size: 72, color: AZUL })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 1440, after: 240 }
+        }),
+        new Paragraph({
+            children: [run('Levantamento de Informações — WhatsApp', { size: 36, color: LARANJA })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 160 }
+        }),
+        new Paragraph({
+            children: [run(`Gerado em ${dataHoje}`, { size: 20, color: '888888' })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 1440 }
+        }),
+        new Paragraph({ children: [new PageBreak()] })
+    ];
+
+    // ── 01 Agentes e Filas ───────────────────────────────────────────────
+    const filas = (draft.filas || []).filter(f => f.nome && f.nome.trim());
+    const agentes = (draft.agentes || []).filter(a => a.nome && a.nome.trim());
+    const secao01 = [
+        h1('01 — Agentes e Filas'),
+        h2('1.1 Filas cadastradas'),
+        makeTable(
+            ['Nome da Fila', 'Descrição / Finalidade'],
+            filas.length ? filas.map(f => [f.nome, f.descricao || '—']) : [['(nenhuma fila cadastrada)', '—']],
+            [3000, 6360]
+        ),
+        new Paragraph({ spacing: { after: 240 } }),
+        h2('1.2 Agentes e vínculos'),
+        makeTable(
+            ['Nome do Agente', 'Filas vinculadas', 'Perfil'],
+            agentes.length
+                ? agentes.map(a => [a.nome, (a.filas || []).join(', ') || '—', a.perfil || 'Agente'])
+                : [['(nenhum agente cadastrado)', '—', '—']],
+            [3120, 4440, 1800]
+        ),
+        new Paragraph({ children: [new PageBreak()] })
+    ];
+
+    // ── 02 BOT ───────────────────────────────────────────────────────────
+    const bot = draft.bot || {};
+    const opcoes = (bot.opcoes || []).filter(o => o.texto || o.fila);
+    const secao02 = [
+        h1('02 — BOT (URA Digital)'),
+        lv('Mensagem inicial', bot.mensagemInicial),
+        new Paragraph({ spacing: { after: 120 } }),
+        h2('Menu de opções'),
+        makeTable(
+            ['Nº', 'Opção', 'Encaminhar para a fila'],
+            opcoes.length
+                ? opcoes.map((o, i) => [String(i + 1), o.texto || '—', o.fila || '—'])
+                : [['—', '(nenhuma opção cadastrada)', '—']],
+            [600, 4380, 4380]
+        ),
+        new Paragraph({ children: [new PageBreak()] })
+    ];
+
+    // ── 03 Horários ──────────────────────────────────────────────────────
+    const h = draft.horario || {};
+    const horTexto = h.padrao === 'sim' || !h.padrao
+        ? 'Segunda a Sexta das 08:00h às 18:00h e Sábado das 08:00h às 12:00h (padrão)'
+        : (h.custom || '(não informado)');
+    const foraTexto = h.msgFora === 'direcionar'
+        ? `Direcionar para a fila: ${h.filaFora || '(não selecionada)'}`
+        : 'Encerrar o atendimento (padrão)';
+    const secao03 = [
+        h1('03 — Horários de Atendimento'),
+        opt('Horário de atendimento', horTexto),
+        opt('Mensagens fora do expediente', foraTexto),
+        new Paragraph({ children: [new PageBreak()] })
+    ];
+
+    // ── 04 Configurações Gerais ──────────────────────────────────────────
+    const c = draft.config || {};
+    const msgs = c.mensagens || {};
+
+    const msgRows = Object.entries(MSG_TITULO).map(([key, titulo]) => {
+        const m = msgs[key] || {};
+        const texto = m.mode === 'custom' && m.texto ? m.texto : (MSG_PADRAO[key] || '—') + (m.mode === 'custom' ? '' : ' (padrão)');
+        return [titulo, texto];
+    });
+
+    const respostas = (c.respostasRapidas || []).filter(r => r.titulo || r.texto);
+
+    const secao04 = [
+        h1('04 — Configurações Gerais'),
+        h2('4.1 Tempos e limites'),
+        opt('Tempo no BOT sem interação',
+            c.tempoBotMode === 'alterar' ? `${c.tempoBot || '—'} minutos` : '20 minutos (padrão)'),
+        opt('Ação após tempo no BOT',
+            c.tempoBotAcao === 'direcionar'
+                ? `Direcionar para a fila: ${c.tempoBotFila || '(não selecionada)'}`
+                : 'Encerrar o atendimento (padrão)'),
+        opt('Tempo sem interação do cliente',
+            c.semInteracaoMode === 'alterar' ? `${c.semInteracaoMin || '—'} minutos`
+            : c.semInteracaoMode === 'nao_encerrar' ? 'Nunca encerrar'
+            : '1440 minutos / 24 horas (padrão)'),
+        opt('Limite de tentativas inválidas',
+            c.tentativasMode === 'alterar' ? `${c.tentativas || '—'} tentativas` : '5 tentativas (padrão)'),
+        opt('Fila após tentativas excedidas', c.tentativasFila || '(não definida)'),
+        new Paragraph({ spacing: { after: 160 } }),
+        h2('4.2 Mensagens automáticas'),
+        makeTable(['Mensagem', 'Texto configurado'], msgRows, [2600, 6760]),
+        ...(respostas.length ? [
+            new Paragraph({ spacing: { after: 160 } }),
+            h2('4.3 Respostas rápidas'),
+            makeTable(['Título do atalho', 'Mensagem enviada'],
+                respostas.map(r => [r.titulo || '—', r.texto || '—']),
+                [2600, 6760])
+        ] : []),
+        new Paragraph({ children: [new PageBreak()] })
+    ];
+
+    // ── 05 Números ───────────────────────────────────────────────────────
+    const num = draft.numeros || {};
+    const secao05 = [
+        h1('05 — Números'),
+        lv('Número principal', num.principal),
+        opt('Pertence a uma URA (PABX)', num.ura === 'sim' ? 'Sim' : 'Não'),
+        new Paragraph({ children: [new PageBreak()] })
+    ];
+
+    // ── 06 Agenda ────────────────────────────────────────────────────────
+    const secao06 = [
+        h1('06 — Agenda de Contatos'),
+        new Paragraph({
+            children: [run('A importação da agenda de contatos (CSV) será realizada pela equipe técnica da IP Solution após o recebimento deste documento.')],
+            spacing: { after: 120 }
+        })
+    ];
+
+    const doc = new Document({
+        styles: { default: { document: { run: { font: 'Segoe UI', size: 20 } } } },
+        sections: [{
+            properties: {},
+            children: [
+                ...capa, ...secao01, ...secao02,
+                ...secao03, ...secao04, ...secao05, ...secao06
+            ]
+        }]
+    });
+
+    Packer.toBlob(doc).then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Levantamento_IP_Solution.docx';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+}
+
+/* ========================= Passo 4 — Efeito Cascata =========================
+   Cada grupo só é revelado quando o anterior estiver válido.
+   Grupos: A = tempos (sempre visível), B = mensagens, C = respostas rápidas  */
+
+const CONFIG_GROUPS = ['config-group-A', 'config-group-B', 'config-group-C'];
+
+function isGroupAComplete() {
+    const step4 = document.getElementById('step4');
+    if (!step4) return false;
+
+    // Tempo no BOT: se "alterar", o campo precisa ter um número válido
+    const tempoBotMode = document.querySelector('input[name="tempo_bot"]:checked');
+    if (tempoBotMode && tempoBotMode.value === 'alterar') {
+        const val = (document.getElementById('tempoBotInput') || {}).value;
+        if (!val || parseInt(val, 10) < 1) return false;
+    }
+    // Ação após tempo: se "direcionar", a fila precisa estar selecionada
+    const acoMode = document.querySelector('input[name="tempo_bot_acao"]:checked');
+    if (acoMode && acoMode.value === 'direcionar') {
+        const fila = (document.getElementById('tempoBotFila') || {}).value;
+        if (!fila) return false;
+    }
+    // "padrao" e "encerrar" são sempre válidos
+    return true;
+}
+
+function checkConfigCascade() {
+    const step4 = document.getElementById('step4');
+    if (!step4) return;
+
+    const gB = document.getElementById('config-group-B');
+    const gC = document.getElementById('config-group-C');
+    if (!gB || !gC) return;
+
+    const aOk = isGroupAComplete();
+    const bOk = true; // mensagens têm sempre um padrão válido
+
+    // Grupo B: desbloqueia se A ok, re-bloqueia se A falhou
+    if (aOk && gB.classList.contains('config-group-locked')) {
+        gB.classList.remove('config-group-locked');
+        const msg = gB.querySelector('.config-group-lock-msg');
+        if (msg) { msg.classList.add('config-group-unlock'); setTimeout(() => msg.remove(), 500); }
+        // Toast só quando o usuário acabou de desbloquear (não no carregamento silencioso)
+        if (document._cascadeLoaded) showToast('✓ Tempos configurados! Mensagens automáticas liberadas.', 'success');
+    } else if (!aOk && !gB.classList.contains('config-group-locked')) {
+        gB.classList.add('config-group-locked');
+        if (!gB.querySelector('.config-group-lock-msg')) {
+            const msg = document.createElement('div');
+            msg.className = 'config-group-lock-msg';
+            msg.innerHTML = '🔒 Preencha a seção de Tempos e limites acima para liberar as mensagens automáticas.';
+            gB.insertBefore(msg, gB.children[1]);
+        }
+        // Também re-bloqueia C
+        if (!gC.classList.contains('config-group-locked')) {
+            gC.classList.add('config-group-locked');
+            if (!gC.querySelector('.config-group-lock-msg')) {
+                const msg2 = document.createElement('div');
+                msg2.className = 'config-group-lock-msg';
+                msg2.innerHTML = '🔒 Configure as mensagens automáticas acima para liberar as respostas rápidas.';
+                gC.insertBefore(msg2, gC.children[1]);
+            }
+        }
+    }
+
+    // Grupo C: desbloqueia se A+B ok, re-bloqueia se não
+    if (aOk && bOk && gC.classList.contains('config-group-locked')) {
+        gC.classList.remove('config-group-locked');
+        const msg = gC.querySelector('.config-group-lock-msg');
+        if (msg) { msg.classList.add('config-group-unlock'); setTimeout(() => msg.remove(), 500); }
+        if (document._cascadeLoaded) showToast('✓ Mensagens configuradas! Respostas rápidas liberadas.', 'success');
+    }
+
+    document._cascadeLoaded = true;
+}
+
+function initConfigCascade() {
+    const step4 = document.getElementById('step4');
+    if (!step4) return;
+
+    // Adiciona IDs aos grupos de configuração para o cascade
+    const groups = step4.querySelectorAll('.config-group');
+    const lockMessages = [
+        null, // Grupo A sempre visível
+        'Preencha a seção de Tempos e limites acima para liberar as mensagens automáticas.',
+        'Configure as mensagens automáticas acima para liberar as respostas rápidas.'
+    ];
+
+    groups.forEach((g, i) => {
+        g.id = CONFIG_GROUPS[i];
+        if (i > 0) {
+            g.classList.add('config-group-locked');
+            const msg = document.createElement('div');
+            msg.className = 'config-group-lock-msg';
+            msg.innerHTML = `🔒 ${lockMessages[i]}`;
+            g.insertBefore(msg, g.children[1]); // após o título
+        }
+    });
+
+    // Escuta mudanças no Grupo A para destravar em tempo real
+    step4.addEventListener('change', checkConfigCascade);
+    step4.addEventListener('input', debounce(checkConfigCascade, 300));
+
+    // Avalia imediatamente (cobre o estado padrão) e após o micro-tick
+    // (cobre rascunhos restaurados que chegam assincronamente)
+    checkConfigCascade();
+    setTimeout(checkConfigCascade, 80);
+}
+
 function saveDraftNow() {
     try {
         const draft = collectDraft();
@@ -1261,6 +1651,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Restaura rascunho ANTES de exibir a etapa (para o progresso e os campos já virem certos)
     const restored = restoreDraft();
+
+    // Cascata do Passo 4: precisa ser chamada APÓS restoreDraft para ler os radios restaurados
+    initConfigCascade();
 
     const savedStep = localStorage.getItem(STORAGE.STEP);
     if (savedStep) currentStep = Math.min(totalSteps, Math.max(1, parseInt(savedStep, 10) || 1));
