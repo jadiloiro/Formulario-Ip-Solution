@@ -198,9 +198,6 @@ function showStep(step) {
     document.getElementById('btnPrev').style.visibility = step === 1 ? 'hidden' : 'visible';
     document.getElementById('btnNext').innerText = step === totalSteps ? 'Finalizar e Enviar ✔️' : 'Salvar e continuar →';
 
-    document.getElementById('botMessage').innerHTML =
-        `<strong>Dica do Jadibô:</strong><br>${botTips[step]}<br><span class="bot-more">👆 Clique em mim para mais dicas desta etapa</span>`;
-
     // Move o foco para o título do passo: orienta leitores de tela e o olhar do usuário
     const title = document.querySelector(`#step${step} .step-title`);
     if (title) {
@@ -208,14 +205,20 @@ function showStep(step) {
         title.focus({ preventScroll: false });
     }
 
-    // Encaixa a barra de ajuda (Conceito/Modelos/Anexos) ao lado do título desta etapa.
-    // Mover o nó preserva os listeners — uma única instância serve as 7 etapas.
+    // Encaixa a barra de ajuda (Conceito/Modelos/Anexos) + o Jadibô ao lado do título.
+    // Mover os nós preserva os listeners — uma única instância serve as 7 etapas.
     const toolbar = document.getElementById('stepToolbar');
+    const jadibo = document.getElementById('jadiboWrap');
     const headerTarget = document.querySelector(`#step${step} .step-header`);
     if (toolbar && headerTarget) headerTarget.appendChild(toolbar);
+    if (jadibo && headerTarget) headerTarget.appendChild(jadibo);
+    jadiboTogglePanel(true); // fecha o painel ao trocar de etapa (dicas são por etapa)
 
     renderStepToolbar(step);
-    if (step === totalSteps) renderFlowPreview();
+    if (step === totalSteps) {
+        renderFlowPreview();
+        if (typeof ifeInit === 'function') ifeInit(); // editor de fluxo embutido
+    }
     updateProgress(step);
     localStorage.setItem(STORAGE.STEP, step);
 }
@@ -333,11 +336,6 @@ function nextStep() {
 
     completedSteps.add(currentStep);
 
-    // Passo 4 — avalia o estado da cascata ao avançar
-    if (currentStep === 4) {
-        checkConfigCascade();
-    }
-
     if (currentStep < totalSteps) {
         currentStep++;
         showStep(currentStep);
@@ -373,38 +371,90 @@ function toggleField(elementId, show) {
     else el.classList.add('hidden');
 }
 
-/* ========================= Reset / Interação Jadibô ========================= */
-function resetForm() {
-    if (confirm("Deseja voltar para a primeira etapa e limpar o progresso?")) {
-        currentStep = 1;
-        completedSteps.clear();
-        document.getElementById('onboardingForm').reset();
-        localStorage.removeItem(STORAGE.STEP);
-        localStorage.removeItem(STORAGE.DRAFT); // limpa também o rascunho salvo
-        const statusEl = document.getElementById('draftStatus');
-        if (statusEl) statusEl.textContent = '';
-        showStep(currentStep);
-        updateFilasDropdowns();
+/* ========================= Reiniciar preenchimento ========================= */
+function resetAllData() {
+    const ok = confirm('Isso apaga TUDO que foi preenchido (filas, agentes, configurações, fluxo do BOT) e recomeça do zero. Deseja continuar?');
+    if (!ok) return;
+
+    // Armazenamento
+    localStorage.removeItem(STORAGE.STEP);
+    localStorage.removeItem(STORAGE.DRAFT);
+    localStorage.removeItem('ipsolution_flow_v2');
+    localStorage.removeItem(STORAGE.SHARED);
+
+    // Campos e estado
+    currentStep = 1;
+    completedSteps.clear();
+    document.getElementById('onboardingForm').reset();
+
+    // Tabelas dinâmicas voltam a 1 linha vazia (respostas rápidas: zero)
+    const resetTbody = (id, keep = 1) => {
+        const tbody = document.getElementById(id);
+        if (!tbody) return;
+        while (tbody.children.length > keep) tbody.lastElementChild.remove();
+        tbody.querySelectorAll('input, select').forEach(el => { el.value = ''; });
+    };
+    resetTbody('filasTableBody');
+    resetTbody('agentesTableBody');
+    resetTbody('botOpcoesTableBody');
+    resetTbody('respostasTableBody', 0);
+    if (typeof refreshRespostasTableVisibility === 'function') refreshRespostasTableVisibility();
+
+    // Multi-selects e prévias das mensagens voltam ao padrão
+    document.querySelectorAll('.multi-select').forEach(ms => ms.setAttribute('data-selected', '[]'));
+    if (typeof MENSAGENS_PADRAO !== 'undefined') {
+        MENSAGENS_PADRAO.forEach(cfg => {
+            const ta = document.getElementById(cfg.id);
+            if (ta) ta.value = cfg.texto;
+            updateMsgPreview(cfg.id);
+        });
     }
+
+    // Editor de fluxo embutido volta ao modelo inicial
+    if (typeof ifeReset === 'function') ifeReset();
+
+    const statusEl = document.getElementById('draftStatus');
+    if (statusEl) statusEl.textContent = '';
+
+    updateFilasDropdowns();
+    showStep(1);
+    showToast('Tudo limpo! Começando do zero. 🧹', 'success');
 }
 
-/* Jadibô: cada clique mostra a próxima dica DA ETAPA ATUAL (com contador) */
+/* ========================= Jadibô compacto (painel de dicas) ========================= */
 const jadiboTipIndex = {};
 
-function interactWithBot() {
+function jadiboSetIntro() {
+    const botMessage = document.getElementById('botMessage');
+    if (botMessage) {
+        botMessage.innerHTML = `<strong>Dica do Jadibô:</strong><br>${botTips[currentStep] || 'Vamos configurar juntos!'}`;
+    }
+    jadiboTipIndex[currentStep] = 0;
+}
+
+function jadiboNextTip() {
     const botImage = document.getElementById('jadiboAvatar');
     const botMessage = document.getElementById('botMessage');
-
-    botImage.classList.add('bot-jump');
-
+    if (botImage) {
+        botImage.classList.add('bot-jump');
+        setTimeout(() => botImage.classList.remove('bot-jump'), 400);
+    }
     const dicas = (stepHelp[currentStep] && stepHelp[currentStep].dicas && stepHelp[currentStep].dicas.length)
         ? stepHelp[currentStep].dicas
         : extraTips;
     const idx = (jadiboTipIndex[currentStep] || 0) % dicas.length;
-    botMessage.innerHTML = `<strong>Dica ${idx + 1} de ${dicas.length}:</strong><br>${dicas[idx]}`;
+    if (botMessage) botMessage.innerHTML = `<strong>Dica ${idx + 1} de ${dicas.length}:</strong><br>${dicas[idx]}`;
     jadiboTipIndex[currentStep] = idx + 1;
+}
 
-    setTimeout(() => botImage.classList.remove('bot-jump'), 400);
+function jadiboTogglePanel(forceClose = false) {
+    const panel = document.getElementById('jadiboPanel');
+    const trigger = document.getElementById('jadiboTrigger');
+    if (!panel || !trigger) return;
+    const willOpen = forceClose ? false : panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', !willOpen);
+    trigger.setAttribute('aria-expanded', String(willOpen));
+    if (willOpen) jadiboSetIntro();
 }
 
 /* ========================= Tabela - FILAS ========================= */
@@ -1090,387 +1140,30 @@ function collectDraft() {
     };
 }
 
-/* ========================= Gerador do Documento Word (client-side via CDN) =========================
-   Usa a biblioteca docx.js carregada no <head>. Gera o levantamento preenchido
-   e o oferece para download direto no navegador — sem precisar do servidor. */
+/* ========================= Download do Documento Word (via endpoint NestJS) =========================
+   O endpoint GET /api/submissions/:id/download gera o .docx no servidor (Node + docx npm)
+   e serve como download direto. Sem CDN de terceiros, sem problemas de CORS. */
 
 function gerarDocumentoLevantamento(draft) {
-    if (typeof docx === 'undefined') {
-        showToast('A biblioteca de geração do Word não carregou. Verifique sua conexão e tente novamente.', 'error');
-        return;
+    if (apiCtx.available && apiCtx.submissionId) {
+        // Salva os dados mais recentes e inicia o download pelo backend
+        fetch(`/api/submissions/${apiCtx.submissionId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formData: draft })
+        }).then(() => {
+            const a = document.createElement('a');
+            a.href = `/api/submissions/${apiCtx.submissionId}/download`;
+            a.download = 'Levantamento_IP_Solution.docx';
+            a.click();
+        }).catch(() => showToast('Erro ao salvar antes de gerar o documento.', 'error'));
+    } else {
+        // Modo offline: avisa que precisa do backend
+        showToast('Para gerar o documento Word, abra o formulário pelo endereço do servidor (http://localhost:3000).', 'error');
     }
-
-    const {
-        Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-        HeadingLevel, AlignmentType, WidthType, BorderStyle, ShadingType, PageBreak
-    } = docx;
-
-    const AZUL    = '002B5E';
-    const LARANJA = 'E85D04';
-    const CINZA   = 'F4F7F9';
-    const BRANCO  = 'FFFFFF';
-    const BORDA   = 'D0D7E0';
-    const TEXTO   = '333333';
-
-    const MSG_PADRAO = {
-        saudacaoAgente:   'Olá, você está falando com o(a) *Nome do Agente*, em que posso ajudar?',
-        msgFilaVazia:     'Nenhum especialista está disponível no momento! Deixe seu recado que em breve retornamos',
-        msgOpcaoInvalida: 'Opção digitada é inválida, digite uma das opções enviadas anteriormente.',
-        msgFimSessao:     'A *Nome da Empresa* agradece o seu contato. Não é necessário responder a essa mensagem. Protocolo: @@PROTOCOLO@@',
-        msgTransferencia: 'Seu atendimento foi transferido para o especialista responsável, obrigado(a).',
-        msgSemInteracao:  'Sua mensagem foi finalizada por falta de interação.',
-        msgTentativas:    'Você excedeu a quantidade de tentativas. Por favor, aguarde um atendente.'
-    };
-
-    const MSG_TITULO = {
-        saudacaoAgente:   'Saudação do agente',
-        msgFilaVazia:     'Nenhum agente disponível',
-        msgOpcaoInvalida: 'Opção inválida',
-        msgFimSessao:     'Fim de atendimento',
-        msgTransferencia: 'Transferência de atendimento',
-        msgSemInteracao:  'Encerramento por inatividade',
-        msgTentativas:    'Tentativas excedidas'
-    };
-
-    const noBorder = () => ({ style: BorderStyle.NONE, size: 0, color: BRANCO });
-    const sideBorder = (show) => show
-        ? { style: BorderStyle.SINGLE, size: 4, color: BORDA }
-        : noBorder();
-
-    function cellBorder(t, r, b, l) {
-        return { top: sideBorder(t), right: sideBorder(r), bottom: sideBorder(b), left: sideBorder(l) };
-    }
-
-    function run(text, opts = {}) {
-        return new TextRun({ text: String(text || ''), font: 'Segoe UI', size: 20, color: TEXTO, ...opts });
-    }
-
-    function h1(text) {
-        return new Paragraph({
-            heading: HeadingLevel.HEADING_1,
-            children: [run(text, { bold: true, size: 28, color: AZUL })],
-            spacing: { before: 400, after: 200 },
-            border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: LARANJA } },
-            shading: { type: ShadingType.CLEAR, fill: CINZA }
-        });
-    }
-
-    function h2(text) {
-        return new Paragraph({
-            heading: HeadingLevel.HEADING_2,
-            children: [run(text, { bold: true, size: 22, color: AZUL })],
-            spacing: { before: 280, after: 120 }
-        });
-    }
-
-    function lv(label, valor) {
-        return new Paragraph({
-            children: [run(label + ': ', { bold: true, color: AZUL }), run(valor || '(não informado)', { color: valor ? TEXTO : '999999' })],
-            spacing: { after: 100 }
-        });
-    }
-
-    function opt(label, valor) {
-        return new Paragraph({
-            children: [run('✓  ', { bold: true, color: LARANJA }), run(label + ': ', { bold: true, color: AZUL }), run(valor)],
-            spacing: { after: 100 }
-        });
-    }
-
-    function makeTable(headers, rows, colWidths) {
-        const total = colWidths.reduce((a, b) => a + b, 0);
-        return new Table({
-            width: { size: total, type: WidthType.DXA },
-            columnWidths: colWidths,
-            rows: [
-                new TableRow({
-                    tableHeader: true,
-                    children: headers.map((h, i) => new TableCell({
-                        children: [new Paragraph({ children: [run(h, { bold: true, color: BRANCO, size: 18 })] })],
-                        width: { size: colWidths[i], type: WidthType.DXA },
-                        shading: { type: ShadingType.CLEAR, fill: AZUL },
-                        borders: cellBorder(false, false, false, false),
-                        margins: { top: 80, bottom: 80, left: 120, right: 120 }
-                    }))
-                }),
-                ...rows.map((row, ri) => new TableRow({
-                    children: row.map((cell, ci) => new TableCell({
-                        children: [new Paragraph({ children: [run(cell, { size: 18 })] })],
-                        width: { size: colWidths[ci], type: WidthType.DXA },
-                        shading: { type: ShadingType.CLEAR, fill: ri % 2 === 0 ? BRANCO : CINZA },
-                        borders: cellBorder(false, false, true, false),
-                        margins: { top: 80, bottom: 80, left: 120, right: 120 }
-                    }))
-                }))
-            ]
-        });
-    }
-
-    const clientName = draft.bot && draft.bot.mensagemInicial ? '' : '';
-    const dataHoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-
-    // ── 00 Capa ──────────────────────────────────────────────────────────
-    const capa = [
-        new Paragraph({
-            children: [run('IP Solution', { bold: true, size: 72, color: AZUL })],
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 1440, after: 240 }
-        }),
-        new Paragraph({
-            children: [run('Levantamento de Informações — WhatsApp', { size: 36, color: LARANJA })],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 160 }
-        }),
-        new Paragraph({
-            children: [run(`Gerado em ${dataHoje}`, { size: 20, color: '888888' })],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 1440 }
-        }),
-        new Paragraph({ children: [new PageBreak()] })
-    ];
-
-    // ── 01 Agentes e Filas ───────────────────────────────────────────────
-    const filas = (draft.filas || []).filter(f => f.nome && f.nome.trim());
-    const agentes = (draft.agentes || []).filter(a => a.nome && a.nome.trim());
-    const secao01 = [
-        h1('01 — Agentes e Filas'),
-        h2('1.1 Filas cadastradas'),
-        makeTable(
-            ['Nome da Fila', 'Descrição / Finalidade'],
-            filas.length ? filas.map(f => [f.nome, f.descricao || '—']) : [['(nenhuma fila cadastrada)', '—']],
-            [3000, 6360]
-        ),
-        new Paragraph({ spacing: { after: 240 } }),
-        h2('1.2 Agentes e vínculos'),
-        makeTable(
-            ['Nome do Agente', 'Filas vinculadas', 'Perfil'],
-            agentes.length
-                ? agentes.map(a => [a.nome, (a.filas || []).join(', ') || '—', a.perfil || 'Agente'])
-                : [['(nenhum agente cadastrado)', '—', '—']],
-            [3120, 4440, 1800]
-        ),
-        new Paragraph({ children: [new PageBreak()] })
-    ];
-
-    // ── 02 BOT ───────────────────────────────────────────────────────────
-    const bot = draft.bot || {};
-    const opcoes = (bot.opcoes || []).filter(o => o.texto || o.fila);
-    const secao02 = [
-        h1('02 — BOT (URA Digital)'),
-        lv('Mensagem inicial', bot.mensagemInicial),
-        new Paragraph({ spacing: { after: 120 } }),
-        h2('Menu de opções'),
-        makeTable(
-            ['Nº', 'Opção', 'Encaminhar para a fila'],
-            opcoes.length
-                ? opcoes.map((o, i) => [String(i + 1), o.texto || '—', o.fila || '—'])
-                : [['—', '(nenhuma opção cadastrada)', '—']],
-            [600, 4380, 4380]
-        ),
-        new Paragraph({ children: [new PageBreak()] })
-    ];
-
-    // ── 03 Horários ──────────────────────────────────────────────────────
-    const h = draft.horario || {};
-    const horTexto = h.padrao === 'sim' || !h.padrao
-        ? 'Segunda a Sexta das 08:00h às 18:00h e Sábado das 08:00h às 12:00h (padrão)'
-        : (h.custom || '(não informado)');
-    const foraTexto = h.msgFora === 'direcionar'
-        ? `Direcionar para a fila: ${h.filaFora || '(não selecionada)'}`
-        : 'Encerrar o atendimento (padrão)';
-    const secao03 = [
-        h1('03 — Horários de Atendimento'),
-        opt('Horário de atendimento', horTexto),
-        opt('Mensagens fora do expediente', foraTexto),
-        new Paragraph({ children: [new PageBreak()] })
-    ];
-
-    // ── 04 Configurações Gerais ──────────────────────────────────────────
-    const c = draft.config || {};
-    const msgs = c.mensagens || {};
-
-    const msgRows = Object.entries(MSG_TITULO).map(([key, titulo]) => {
-        const m = msgs[key] || {};
-        const texto = m.mode === 'custom' && m.texto ? m.texto : (MSG_PADRAO[key] || '—') + (m.mode === 'custom' ? '' : ' (padrão)');
-        return [titulo, texto];
-    });
-
-    const respostas = (c.respostasRapidas || []).filter(r => r.titulo || r.texto);
-
-    const secao04 = [
-        h1('04 — Configurações Gerais'),
-        h2('4.1 Tempos e limites'),
-        opt('Tempo no BOT sem interação',
-            c.tempoBotMode === 'alterar' ? `${c.tempoBot || '—'} minutos` : '20 minutos (padrão)'),
-        opt('Ação após tempo no BOT',
-            c.tempoBotAcao === 'direcionar'
-                ? `Direcionar para a fila: ${c.tempoBotFila || '(não selecionada)'}`
-                : 'Encerrar o atendimento (padrão)'),
-        opt('Tempo sem interação do cliente',
-            c.semInteracaoMode === 'alterar' ? `${c.semInteracaoMin || '—'} minutos`
-            : c.semInteracaoMode === 'nao_encerrar' ? 'Nunca encerrar'
-            : '1440 minutos / 24 horas (padrão)'),
-        opt('Limite de tentativas inválidas',
-            c.tentativasMode === 'alterar' ? `${c.tentativas || '—'} tentativas` : '5 tentativas (padrão)'),
-        opt('Fila após tentativas excedidas', c.tentativasFila || '(não definida)'),
-        new Paragraph({ spacing: { after: 160 } }),
-        h2('4.2 Mensagens automáticas'),
-        makeTable(['Mensagem', 'Texto configurado'], msgRows, [2600, 6760]),
-        ...(respostas.length ? [
-            new Paragraph({ spacing: { after: 160 } }),
-            h2('4.3 Respostas rápidas'),
-            makeTable(['Título do atalho', 'Mensagem enviada'],
-                respostas.map(r => [r.titulo || '—', r.texto || '—']),
-                [2600, 6760])
-        ] : []),
-        new Paragraph({ children: [new PageBreak()] })
-    ];
-
-    // ── 05 Números ───────────────────────────────────────────────────────
-    const num = draft.numeros || {};
-    const secao05 = [
-        h1('05 — Números'),
-        lv('Número principal', num.principal),
-        opt('Pertence a uma URA (PABX)', num.ura === 'sim' ? 'Sim' : 'Não'),
-        new Paragraph({ children: [new PageBreak()] })
-    ];
-
-    // ── 06 Agenda ────────────────────────────────────────────────────────
-    const secao06 = [
-        h1('06 — Agenda de Contatos'),
-        new Paragraph({
-            children: [run('A importação da agenda de contatos (CSV) será realizada pela equipe técnica da IP Solution após o recebimento deste documento.')],
-            spacing: { after: 120 }
-        })
-    ];
-
-    const doc = new Document({
-        styles: { default: { document: { run: { font: 'Segoe UI', size: 20 } } } },
-        sections: [{
-            properties: {},
-            children: [
-                ...capa, ...secao01, ...secao02,
-                ...secao03, ...secao04, ...secao05, ...secao06
-            ]
-        }]
-    });
-
-    Packer.toBlob(doc).then(blob => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'Levantamento_IP_Solution.docx';
-        a.click();
-        URL.revokeObjectURL(a.href);
-    });
 }
 
-/* ========================= Passo 4 — Efeito Cascata =========================
-   Cada grupo só é revelado quando o anterior estiver válido.
-   Grupos: A = tempos (sempre visível), B = mensagens, C = respostas rápidas  */
-
-const CONFIG_GROUPS = ['config-group-A', 'config-group-B', 'config-group-C'];
-
-function isGroupAComplete() {
-    const step4 = document.getElementById('step4');
-    if (!step4) return false;
-
-    // Tempo no BOT: se "alterar", o campo precisa ter um número válido
-    const tempoBotMode = document.querySelector('input[name="tempo_bot"]:checked');
-    if (tempoBotMode && tempoBotMode.value === 'alterar') {
-        const val = (document.getElementById('tempoBotInput') || {}).value;
-        if (!val || parseInt(val, 10) < 1) return false;
-    }
-    // Ação após tempo: se "direcionar", a fila precisa estar selecionada
-    const acoMode = document.querySelector('input[name="tempo_bot_acao"]:checked');
-    if (acoMode && acoMode.value === 'direcionar') {
-        const fila = (document.getElementById('tempoBotFila') || {}).value;
-        if (!fila) return false;
-    }
-    // "padrao" e "encerrar" são sempre válidos
-    return true;
-}
-
-function checkConfigCascade() {
-    const step4 = document.getElementById('step4');
-    if (!step4) return;
-
-    const gB = document.getElementById('config-group-B');
-    const gC = document.getElementById('config-group-C');
-    if (!gB || !gC) return;
-
-    const aOk = isGroupAComplete();
-    const bOk = true; // mensagens têm sempre um padrão válido
-
-    // Grupo B: desbloqueia se A ok, re-bloqueia se A falhou
-    if (aOk && gB.classList.contains('config-group-locked')) {
-        gB.classList.remove('config-group-locked');
-        const msg = gB.querySelector('.config-group-lock-msg');
-        if (msg) { msg.classList.add('config-group-unlock'); setTimeout(() => msg.remove(), 500); }
-        // Toast só quando o usuário acabou de desbloquear (não no carregamento silencioso)
-        if (document._cascadeLoaded) showToast('✓ Tempos configurados! Mensagens automáticas liberadas.', 'success');
-    } else if (!aOk && !gB.classList.contains('config-group-locked')) {
-        gB.classList.add('config-group-locked');
-        if (!gB.querySelector('.config-group-lock-msg')) {
-            const msg = document.createElement('div');
-            msg.className = 'config-group-lock-msg';
-            msg.innerHTML = '🔒 Preencha a seção de Tempos e limites acima para liberar as mensagens automáticas.';
-            gB.insertBefore(msg, gB.children[1]);
-        }
-        // Também re-bloqueia C
-        if (!gC.classList.contains('config-group-locked')) {
-            gC.classList.add('config-group-locked');
-            if (!gC.querySelector('.config-group-lock-msg')) {
-                const msg2 = document.createElement('div');
-                msg2.className = 'config-group-lock-msg';
-                msg2.innerHTML = '🔒 Configure as mensagens automáticas acima para liberar as respostas rápidas.';
-                gC.insertBefore(msg2, gC.children[1]);
-            }
-        }
-    }
-
-    // Grupo C: desbloqueia se A+B ok, re-bloqueia se não
-    if (aOk && bOk && gC.classList.contains('config-group-locked')) {
-        gC.classList.remove('config-group-locked');
-        const msg = gC.querySelector('.config-group-lock-msg');
-        if (msg) { msg.classList.add('config-group-unlock'); setTimeout(() => msg.remove(), 500); }
-        if (document._cascadeLoaded) showToast('✓ Mensagens configuradas! Respostas rápidas liberadas.', 'success');
-    }
-
-    document._cascadeLoaded = true;
-}
-
-function initConfigCascade() {
-    const step4 = document.getElementById('step4');
-    if (!step4) return;
-
-    // Adiciona IDs aos grupos de configuração para o cascade
-    const groups = step4.querySelectorAll('.config-group');
-    const lockMessages = [
-        null, // Grupo A sempre visível
-        'Preencha a seção de Tempos e limites acima para liberar as mensagens automáticas.',
-        'Configure as mensagens automáticas acima para liberar as respostas rápidas.'
-    ];
-
-    groups.forEach((g, i) => {
-        g.id = CONFIG_GROUPS[i];
-        if (i > 0) {
-            g.classList.add('config-group-locked');
-            const msg = document.createElement('div');
-            msg.className = 'config-group-lock-msg';
-            msg.innerHTML = `🔒 ${lockMessages[i]}`;
-            g.insertBefore(msg, g.children[1]); // após o título
-        }
-    });
-
-    // Escuta mudanças no Grupo A para destravar em tempo real
-    step4.addEventListener('change', checkConfigCascade);
-    step4.addEventListener('input', debounce(checkConfigCascade, 300));
-
-    // Avalia imediatamente (cobre o estado padrão) e após o micro-tick
-    // (cobre rascunhos restaurados que chegam assincronamente)
-    checkConfigCascade();
-    setTimeout(checkConfigCascade, 80);
-}
+/* Cascata removida — grupos do Passo 4 agora usam accordion */
 
 function saveDraftNow() {
     try {
@@ -1625,6 +1318,17 @@ function restoreDraft() {
 }
 
 /* ========================= Inicialização ========================= */
+/* ========================= Passo 4: Accordion ========================= */
+function setupConfigAccordion() {
+    document.querySelectorAll('.config-group-title').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const section = btn.closest('.config-group');
+            const isOpen = section.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', String(isOpen));
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Detecta o backend NestJS em segundo plano (não bloqueia o carregamento)
     initApiSync();
@@ -1639,6 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderMensagensPadrao();
     renderSugestaoChips();
     setupStep4Interactions();
+    setupConfigAccordion();
     document.getElementById('addRespostaBtn').addEventListener('click', () => addRespostaRow());
     document.getElementById('respostasTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-delete');
@@ -1653,7 +1358,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const restored = restoreDraft();
 
     // Cascata do Passo 4: precisa ser chamada APÓS restoreDraft para ler os radios restaurados
-    initConfigCascade();
 
     const savedStep = localStorage.getItem(STORAGE.STEP);
     if (savedStep) currentStep = Math.min(totalSteps, Math.max(1, parseInt(savedStep, 10) || 1));
@@ -1688,6 +1392,28 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('input', scheduleDraftSave);
     form.addEventListener('change', scheduleDraftSave);
     document.getElementById('btnSaveDraft').addEventListener('click', saveDraft);
+    document.getElementById('btnReset').addEventListener('click', resetAllData);
+
+    // Accordion do Passo 4: título abre/fecha o grupo (sem travas, sem rolagem forçada)
+    document.querySelectorAll('#step4 .config-group-title').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const group = btn.closest('.config-group');
+            const open = group.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', String(open));
+        });
+    });
+
+    // Jadibô compacto: clique no ícone abre o painel; "Próxima dica" cicla as dicas da etapa
+    const jadiboTrigger = document.getElementById('jadiboTrigger');
+    if (jadiboTrigger) jadiboTrigger.addEventListener('click', (e) => { e.stopPropagation(); jadiboTogglePanel(); });
+    const jadiboNextBtn = document.getElementById('jadiboNext');
+    if (jadiboNextBtn) jadiboNextBtn.addEventListener('click', jadiboNextTip);
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#jadiboWrap')) jadiboTogglePanel(true);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') jadiboTogglePanel(true);
+    });
 
     document.getElementById('filasTableBody').addEventListener('input', function (e) {
         if (e.target.classList.contains('fila-nome')) {
@@ -1776,3 +1502,440 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!e.target.closest('.multi-select')) closeAllMultiSelects();
     });
 });
+
+/* ==============================================================
+   Editor de Fluxo EMBUTIDO no Passo 7 (motor: Drawflow via CDN)
+   Lê filas/agentes/horários/mensagem direto do formulário (mesma página).
+   ============================================================== */
+
+(function () {
+    'use strict';
+
+    const IFE_GRAPH_KEY = 'ipsolution_flow_v2';
+    const VALID_NODE_TYPES = new Set(['inicio', 'mensagem', 'entrada', 'menu', 'condicao', 'aguardar', 'transferir', 'encerrar']);
+    const NODE_LABELS = {
+        inicio: 'Início', mensagem: 'Mensagem', entrada: 'Entrada', menu: 'Menu',
+        condicao: 'Condição de horário', aguardar: 'Aguardar',
+        transferir: 'Transferir para fila', encerrar: 'Encerrar atendimento'
+    };
+    const PALETTE = [
+        { type: 'menu',      icon: '☷',  label: 'Menu' },
+        { type: 'mensagem',  icon: '💬', label: 'Mensagem' },
+        { type: 'entrada',   icon: '⇥',  label: 'Entrada' },
+        { type: 'condicao',  icon: '⑂',  label: 'Condição' },
+        { type: 'aguardar',  icon: '🕐', label: 'Aguardar' },
+        { type: 'transferir',icon: '📥', label: 'Transferir' },
+        { type: 'encerrar',  icon: '⏻',  label: 'Encerrar' }
+    ];
+
+    let editor = null;
+    let inicioId = null;
+    let inited = false;
+
+    /* ---------- Dados vivos do formulário (mesma página!) ---------- */
+    function filasDoForm() {
+        return Array.from(document.querySelectorAll('.fila-nome'))
+            .map(i => i.value.trim()).filter(Boolean);
+    }
+    function dadosVivos() {
+        const { horarioTexto, destinoFora } = getHorarioResumo();
+        return {
+            filas: filasDoForm(),
+            agentesPorFila: getFilaAgentesMap(),
+            mensagemInicial: (document.getElementById('botMensagemInicial') || {}).value || '',
+            horarioTexto, destinoFora
+        };
+    }
+
+    /* ---------- HTML dos nós ---------- */
+    function headerHtml(icon, title) {
+        return `<div class="node-header"><span class="node-hicon">${icon}</span><span class="node-htitle">${escapeHtml(title)}</span></div>`;
+    }
+    function menuRowHtml(i, v) {
+        return `<div class="menu-row"><span class="menu-num">${i + 1}</span><input type="text" class="menu-opt-input" data-idx="${i}" placeholder="Ex: Comercial" value="${escapeHtml(v || '')}"></div>`;
+    }
+    function htmlMenu(options) {
+        const rows = (options || ['']).map((op, i) => menuRowHtml(i, op)).join('');
+        return `${headerHtml('☷', 'Menu')}<div class="node-body">
+            <label class="node-field-label">Mensagem enviada ao cliente</label>
+            <textarea df-texto placeholder="Ex: Digite o número da opção desejada:"></textarea>
+            <label class="node-field-label" style="margin-top:10px;">Opções — cada uma vira uma saída →</label>
+            <div class="menu-rows">${rows}</div>
+            <div class="menu-actions"><button type="button" class="menu-add">+ opção</button><button type="button" class="menu-del">− última</button></div>
+        </div>`;
+    }
+    function agentesHtml(fila) {
+        const d = dadosVivos();
+        const ag = (d.agentesPorFila && d.agentesPorFila[fila]) || [];
+        if (!fila) return '<span class="node-muted">Escolha a fila de destino</span>';
+        return ag.length
+            ? `<div class="node-agents">${ag.map(a => `<span class="node-agent-chip">${escapeHtml(a)}</span>`).join('')}</div>`
+            : '<span class="node-muted">Sem agente vinculado no Passo 2</span>';
+    }
+    function filaOptionsHtml(sel) {
+        return '<option value="">Selecione a fila…</option>' + filasDoForm()
+            .map(f => `<option value="${escapeHtml(f)}" ${f === sel ? 'selected' : ''}>${escapeHtml(f)}</option>`).join('');
+    }
+    function htmlPorTipo(type, preset) {
+        const d = dadosVivos();
+        switch (type) {
+            case 'inicio': return `${headerHtml('⏻', 'Início')}<div class="node-body"><p>Dispara quando o cliente envia a <strong>primeira mensagem</strong>.</p></div>`;
+            case 'mensagem': return `${headerHtml('💬', 'Mensagem')}<div class="node-body"><textarea df-texto placeholder="Texto enviado ao cliente"></textarea></div>`;
+            case 'entrada': return `${headerHtml('⇥', 'Entrada')}<div class="node-body"><textarea df-pergunta placeholder="Ex: Qual o seu nome completo?"></textarea></div>`;
+            case 'menu': return htmlMenu(preset && preset.options);
+            case 'condicao': return `${headerHtml('⑂', 'Condição de horário')}<div class="node-body">
+                <p class="cond-resumo">Expediente (Passo 3): <strong class="h-exp">${escapeHtml(d.horarioTexto || 'não definido')}</strong></p>
+                <div class="cond-row"><span class="cond-ok">✓</span> Dentro do horário</div>
+                <div class="cond-row"><span class="cond-no">✕</span> Fora do horário</div></div>`;
+            case 'aguardar': return `${headerHtml('🕐', 'Aguardar')}<div class="node-body"><div class="field-suffix"><input type="number" min="1" df-minutos> <span>minutos</span></div></div>`;
+            case 'transferir': return `${headerHtml('📥', 'Transferir para fila')}<div class="node-body">
+                <select class="transferir-fila">${filaOptionsHtml(preset && preset.fila)}</select>
+                <div class="node-agents-wrap">${agentesHtml(preset && preset.fila)}</div></div>`;
+            case 'encerrar': return `${headerHtml('⏻', 'Encerrar atendimento')}<div class="node-body"><p>Envia a <strong>mensagem de fim de sessão</strong> (Passo 4) e encerra.</p></div>`;
+        }
+        return '';
+    }
+
+    function addNode(type, x, y, preset = {}) {
+        let id = null;
+        const d = dadosVivos();
+        switch (type) {
+            case 'inicio':
+                id = editor.addNode('inicio', 0, 1, x, y, 'node-inicio', {}, htmlPorTipo('inicio'));
+                inicioId = id; break;
+            case 'mensagem':
+                id = editor.addNode('mensagem', 1, 1, x, y, 'node-mensagem', { texto: preset.texto || '' }, htmlPorTipo('mensagem')); break;
+            case 'entrada':
+                id = editor.addNode('entrada', 1, 1, x, y, 'node-entrada', { pergunta: '' }, htmlPorTipo('entrada')); break;
+            case 'menu': {
+                const options = preset.options && preset.options.length ? preset.options : [''];
+                id = editor.addNode('menu', 1, options.length, x, y, 'node-menu', { texto: preset.texto || '', options }, htmlPorTipo('menu', { options })); break;
+            }
+            case 'condicao':
+                id = editor.addNode('condicao', 1, 2, x, y, 'node-condicao', {}, htmlPorTipo('condicao')); break;
+            case 'aguardar':
+                id = editor.addNode('aguardar', 1, 1, x, y, 'node-aguardar', { minutos: 5 }, htmlPorTipo('aguardar')); break;
+            case 'transferir':
+                id = editor.addNode('transferir', 1, 0, x, y, 'node-transferir', { fila: preset.fila || '' }, htmlPorTipo('transferir', preset)); break;
+            case 'encerrar':
+                id = editor.addNode('encerrar', 1, 0, x, y, 'node-encerrar', {}, htmlPorTipo('encerrar')); break;
+        }
+        scheduleIfeSave();
+        return id;
+    }
+
+    function exportData() {
+        const raw = editor.export();
+        return (raw && raw.drawflow && raw.drawflow.Home && raw.drawflow.Home.data) || {};
+    }
+    function nextPos() {
+        const n = Object.keys(exportData()).length;
+        return { x: 60 + (n % 3) * 320, y: 60 + Math.floor(n / 3) * 200 };
+    }
+
+    /* ---------- Persistência (localStorage + API) ---------- */
+    function ifeSaveNow() {
+        const graph = editor.export();
+        try { localStorage.setItem(IFE_GRAPH_KEY, JSON.stringify(graph)); } catch (e) { /* sem storage */ }
+        if (apiCtx.available && apiCtx.submissionId) {
+            fetch(`/api/submissions/${apiCtx.submissionId}/flow`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ flowData: graph })
+            }).catch(() => { /* offline: localStorage cobre */ });
+        }
+        ifeValidate();
+        renderFilasList();
+    }
+    const scheduleIfeSave = debounce(ifeSaveNow, 800);
+
+    function graphOk(graph) {
+        const data = graph && graph.drawflow && graph.drawflow.Home && graph.drawflow.Home.data;
+        if (!data || Object.keys(data).length === 0) return false;
+        return Object.values(data).every(n => VALID_NODE_TYPES.has(n.name));
+    }
+
+    function starterTemplate() {
+        const d = dadosVivos();
+        const i = addNode('inicio', 40, 120);
+        const m = addNode('menu', 340, 40, { texto: d.mensagemInicial || 'Olá! Digite o número da opção desejada:', options: [''] });
+        editor.addConnection(i, m, 'output_1', 'input_1');
+    }
+
+    function rebuildDynamic() {
+        Object.values(exportData()).forEach(n => {
+            const el = document.getElementById(`node-${n.id}`);
+            if (!el) return;
+            if (n.name === 'menu') {
+                const wrap = el.querySelector('.menu-rows');
+                if (wrap) wrap.innerHTML = (n.data.options || ['']).map((op, i) => menuRowHtml(i, op)).join('');
+            }
+            if (n.name === 'transferir') {
+                const sel = el.querySelector('.transferir-fila');
+                const wrap = el.querySelector('.node-agents-wrap');
+                if (sel) sel.innerHTML = filaOptionsHtml(n.data.fila || '');
+                if (wrap) wrap.innerHTML = agentesHtml(n.data.fila || '');
+            }
+            if (n.name === 'condicao') {
+                const exp = el.querySelector('.h-exp');
+                if (exp) exp.textContent = dadosVivos().horarioTexto || 'não definido';
+            }
+        });
+    }
+
+    function loadGraph() {
+        let graph = null, migrated = false;
+        try {
+            const raw = localStorage.getItem(IFE_GRAPH_KEY);
+            if (raw) {
+                const g = JSON.parse(raw);
+                if (graphOk(g)) graph = g; else migrated = true;
+            }
+        } catch (e) { /* recomeça */ }
+        if (graph) {
+            editor.import(graph);
+            rebuildDynamic();
+            const ini = Object.values(exportData()).find(n => n.name === 'inicio');
+            inicioId = ini ? ini.id : addNode('inicio', 40, 120);
+        } else {
+            starterTemplate();
+            if (migrated) showToast('Fluxo antigo arquivado — começamos do modelo novo.', 'info');
+        }
+    }
+
+    /* ---------- Paleta e lista de filas ---------- */
+    function renderPalette() {
+        const nav = document.getElementById('ifePalette');
+        if (!nav || nav.children.length) return;
+        PALETTE.forEach(p => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ife-action';
+            btn.innerHTML = `<span class="ife-action-icon">${p.icon}</span><span>${p.label}</span>`;
+            btn.title = NODE_LABELS[p.type];
+            btn.addEventListener('click', () => {
+                const pos = nextPos();
+                addNode(p.type, pos.x, pos.y);
+            });
+            nav.appendChild(btn);
+        });
+    }
+
+    function renderFilasList() {
+        const list = document.getElementById('ifeFilasList');
+        const hint = document.getElementById('ifeFilasHint');
+        const count = document.getElementById('ifeFilasCount');
+        if (!list) return;
+        const filas = filasDoForm();
+        count.textContent = filas.length;
+        hint.classList.toggle('hidden', filas.length > 0);
+        list.innerHTML = '';
+        const d = dadosVivos();
+        filas.forEach(f => {
+            const ag = (d.agentesPorFila[f] || []);
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'ife-fila-item';
+            item.innerHTML = `<strong>📥 ${escapeHtml(f)}</strong><span>${ag.length ? escapeHtml(ag.join(', ')) : 'sem agente'}</span>`;
+            item.title = `Criar bloco "Transferir → ${f}"`;
+            item.addEventListener('click', () => {
+                const pos = nextPos();
+                addNode('transferir', pos.x, pos.y, { fila: f });
+            });
+            list.appendChild(item);
+        });
+    }
+
+    /* ---------- Validações compactas ---------- */
+    function outConns(n, oc) { return (n.outputs && n.outputs[oc] && n.outputs[oc].connections) || []; }
+    function hasIn(n) { return ((n.inputs && n.inputs.input_1 && n.inputs.input_1.connections) || []).length > 0; }
+
+    function ifeValidate() {
+        const box = document.getElementById('ifeValidation');
+        if (!box) return;
+        const nodes = Object.values(exportData());
+        const issues = [];
+        const ini = nodes.find(n => n.name === 'inicio');
+        if (ini && nodes.length > 1 && outConns(ini, 'output_1').length === 0) issues.push('Início sem conexão.');
+        nodes.forEach(n => {
+            if (n.name !== 'inicio' && !hasIn(n)) issues.push(`"${NODE_LABELS[n.name] || 'Bloco'}" desconectado.`);
+            if (n.name === 'menu') {
+                (n.data.options || []).forEach((op, i) => {
+                    if (!op || !op.trim()) issues.push(`Opção ${i + 1} do Menu sem texto.`);
+                    if (outConns(n, `output_${i + 1}`).length === 0) issues.push(`Opção ${i + 1} do Menu sem destino.`);
+                });
+            }
+            if (n.name === 'transferir' && !n.data.fila) issues.push('Transferir sem fila.');
+        });
+        if (issues.length === 0) {
+            box.className = 'ife-validation ok';
+            box.textContent = nodes.length > 1 ? '✓ Fluxo consistente' : 'Adicione ações pela paleta';
+        } else {
+            box.className = 'ife-validation warn';
+            box.textContent = `⚠ ${issues.length} ponto(s): ${issues.slice(0, 2).join(' ')}${issues.length > 2 ? '…' : ''}`;
+            box.title = issues.join('\n');
+        }
+    }
+
+    /* ---------- Resumo ---------- */
+    function resumoTexto() {
+        const nodes = Object.values(exportData());
+        const d = dadosVivos();
+        const lines = ['FLUXO DO BOT — IP Solution', ''];
+        const menus = nodes.filter(n => n.name === 'menu');
+        menus.forEach(menu => {
+            if (menu.data.texto) lines.push(`Mensagem: "${menu.data.texto}"`);
+            (menu.data.options || []).forEach((op, i) => {
+                const alvo = outConns(menu, `output_${i + 1}`).map(c => {
+                    const t = nodes.find(n => String(n.id) === String(c.node));
+                    if (!t) return '?';
+                    if (t.name === 'transferir') return `Fila ${t.data.fila || '?'}`;
+                    return NODE_LABELS[t.name] || t.name;
+                }).join(' + ') || '(sem destino)';
+                lines.push(`  ${i + 1}. ${op || '(sem texto)'} → ${alvo}`);
+            });
+            lines.push('');
+        });
+        lines.push(`Horário: ${d.horarioTexto}`);
+        lines.push(`Fora do horário: ${d.destinoFora}`);
+        return lines.join('\n');
+    }
+
+    /* ---------- Interações internas dos nós ---------- */
+    function nodeIdOf(el) {
+        const b = el.closest('.drawflow-node');
+        return b ? b.id.replace('node-', '') : null;
+    }
+    function renumber(el) {
+        el.querySelectorAll('.menu-row').forEach((row, i) => {
+            row.querySelector('.menu-num').textContent = i + 1;
+            row.querySelector('.menu-opt-input').setAttribute('data-idx', i);
+        });
+    }
+    function wireCanvas(container) {
+        container.addEventListener('input', (e) => {
+            const id = nodeIdOf(e.target);
+            if (!id) return;
+            if (e.target.classList.contains('menu-opt-input')) {
+                const node = editor.getNodeFromId(id);
+                const options = (node.data.options || []).slice();
+                options[parseInt(e.target.getAttribute('data-idx'), 10)] = e.target.value;
+                editor.updateNodeDataFromId(id, { ...node.data, options });
+                scheduleIfeSave();
+            }
+        });
+        container.addEventListener('change', (e) => {
+            const id = nodeIdOf(e.target);
+            if (!id) return;
+            if (e.target.classList.contains('transferir-fila')) {
+                const node = editor.getNodeFromId(id);
+                editor.updateNodeDataFromId(id, { ...node.data, fila: e.target.value });
+                const wrap = e.target.closest('.node-body').querySelector('.node-agents-wrap');
+                if (wrap) wrap.innerHTML = agentesHtml(e.target.value);
+                scheduleIfeSave();
+            }
+        });
+        container.addEventListener('click', (e) => {
+            const id = nodeIdOf(e.target);
+            if (!id) return;
+            const nodeEl = document.getElementById(`node-${id}`);
+            if (e.target.classList.contains('menu-add')) {
+                const node = editor.getNodeFromId(id);
+                const options = (node.data.options || ['']).slice();
+                options.push('');
+                editor.updateNodeDataFromId(id, { ...node.data, options });
+                editor.addNodeOutput(id);
+                nodeEl.querySelector('.menu-rows').insertAdjacentHTML('beforeend', menuRowHtml(options.length - 1, ''));
+                renumber(nodeEl);
+                scheduleIfeSave();
+            }
+            if (e.target.classList.contains('menu-del')) {
+                const node = editor.getNodeFromId(id);
+                const options = (node.data.options || ['']).slice();
+                if (options.length <= 1) { showToast('O menu precisa de pelo menos uma opção.', 'error'); return; }
+                editor.removeNodeOutput(id, `output_${options.length}`);
+                options.pop();
+                editor.updateNodeDataFromId(id, { ...node.data, options });
+                const rows = nodeEl.querySelectorAll('.menu-row');
+                rows[rows.length - 1].remove();
+                renumber(nodeEl);
+                scheduleIfeSave();
+            }
+        });
+    }
+
+    /* ---------- API pública do módulo ---------- */
+    window.ifeInit = function () {
+        // Atualização leve nas visitas seguintes
+        if (inited) { renderFilasList(); rebuildDynamic(); ifeValidate(); return; }
+
+        const canvas = document.getElementById('ifeCanvas');
+        if (!canvas) return;
+
+        if (typeof Drawflow === 'undefined') {
+            canvas.innerHTML = '<div class="ife-offline">📡 O editor visual precisa de internet para carregar (biblioteca Drawflow). Verifique a conexão e recarregue a página.</div>';
+            return;
+        }
+
+        editor = new Drawflow(canvas);
+        editor.reroute = true;
+        editor.zoom_min = 0.3;
+        editor.zoom_max = 2;
+        editor.start();
+        window.__ifeEditor = editor; // gancho de QA
+
+        loadGraph();
+        renderPalette();
+        renderFilasList();
+        ifeValidate();
+        wireCanvas(canvas);
+
+        ['nodeCreated', 'nodeMoved', 'nodeDataChanged', 'connectionCreated', 'connectionRemoved'].forEach(evt => {
+            editor.on(evt, () => scheduleIfeSave());
+        });
+        editor.on('nodeRemoved', (id) => {
+            if (String(id) === String(inicioId)) {
+                showToast('O bloco Início é o gatilho do fluxo — recriado.', 'error');
+                addNode('inicio', 40, 120);
+            }
+            scheduleIfeSave();
+        });
+
+        document.getElementById('ifeZoomIn').addEventListener('click', () => editor.zoom_in());
+        document.getElementById('ifeZoomOut').addEventListener('click', () => editor.zoom_out());
+        document.getElementById('ifeZoomReset').addEventListener('click', () => editor.zoom_reset());
+        canvas.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) editor.zoom_in(); else editor.zoom_out();
+            }
+        }, { passive: false });
+
+        document.getElementById('ifeRefreshBtn').addEventListener('click', () => {
+            renderFilasList(); rebuildDynamic(); ifeValidate();
+            showToast('Dados do formulário atualizados no editor.', 'success');
+        });
+        document.getElementById('ifeClearBtn').addEventListener('click', () => {
+            if (!confirm('Limpar todos os blocos do fluxo?')) return;
+            editor.clearModuleSelected();
+            starterTemplate();
+            ifeSaveNow();
+        });
+        document.getElementById('ifeCopyBtn').addEventListener('click', () => {
+            const t = resumoTexto();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(t).then(() => showToast('Resumo do fluxo copiado!', 'success'));
+            }
+        });
+
+        inited = true;
+    };
+
+    /* Reinício total (chamado pelo botão Reiniciar) */
+    window.ifeReset = function () {
+        if (!inited || !editor) { localStorage.removeItem(IFE_GRAPH_KEY); return; }
+        editor.clearModuleSelected();
+        starterTemplate();
+        ifeSaveNow();
+    };
+})();

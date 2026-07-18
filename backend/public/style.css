@@ -650,49 +650,47 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     .wa-preview { max-width: 100%; }
 }
 
-/* ================= Cascata Passo 4 ================= */
-.config-group-locked {
-    position: relative;
-    pointer-events: none;
-    user-select: none;
+/* ================= Passo 4: Accordion dos grupos ================= */
+.config-group {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+    background: var(--surface);
 }
-.config-group-locked > *:not(.config-group-title):not(.config-group-lock-msg) {
-    opacity: 0.25;
-    filter: blur(2px);
-    transition: opacity 0.4s ease, filter 0.4s ease;
-}
-.config-group-lock-msg {
+.config-group-title {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
-    background: var(--warning-tint);
-    border: 1px solid var(--warning);
-    border-radius: var(--radius);
-    padding: 12px 14px;
-    font-size: 13px;
-    color: var(--text-dark);
-    margin-bottom: 14px;
-    pointer-events: all;
-    animation: cascataIn 0.3s ease;
+    padding: 14px 18px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary-blue);
+    background: var(--surface);
+    border: none;
+    width: 100%;
+    text-align: left;
+    transition: background 0.18s;
+    -webkit-user-select: none;
+    user-select: none;
 }
-.config-group-unlock {
-    animation: cascataOut 0.5s ease forwards;
+.config-group-title:hover { background: var(--surface-hover); }
+.config-group-title .cgt-arrow {
+    font-size: 11px;
+    color: var(--text-muted);
+    transition: transform 0.22s ease;
+    flex-shrink: 0;
 }
-@keyframes cascataIn {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
+.config-group.is-open > .config-group-title .cgt-arrow { transform: rotate(180deg); }
+.config-group-body {
+    padding: 0 18px 18px;
+    display: none;
+    animation: accordionIn 0.22s ease;
 }
-@keyframes cascataOut {
-    to { opacity: 0; transform: translateY(-6px); }
-}
-
-/* Quando desbloqueado, remove blur/opacity com transição */
-.config-group:not(.config-group-locked) > * {
-    opacity: 1;
-    filter: none;
-    transition: opacity 0.4s ease, filter 0.4s ease;
-    pointer-events: auto;
-}
+.config-group.is-open > .config-group-body { display: block; }
+@keyframes accordionIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Conditional Logic */
 .radio-group { display: flex; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
@@ -744,21 +742,77 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .toast.success { background: var(--success); }
 .toast.error { background: var(--danger); }
 
-/* Floating Bot */
-.floating-bot { position: fixed; bottom: 90px; right: 30px; display: flex; align-items: flex-end; gap: 15px; z-index: 100; }
-.bot-message { background: var(--primary-blue); color: var(--white); padding: 15px; border-radius: 12px 12px 0 12px; font-size: 13px; max-width: 220px; box-shadow: var(--shadow); position: relative; animation: slideUp 0.5s ease; transition: all 0.3s ease; }
-.bot-more { display: block; margin-top: 8px; font-size: 11px; opacity: 0.8; font-style: italic; }
-
-.bot-icon-floating {
-    width: 100px;
-    height: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 6px 8px rgba(0,0,0,0.3));
+/* ================= Jadibô compacto (ícone + painel de dicas) ================= */
+.jadibo-wrap { position: relative; flex-shrink: 0; align-self: flex-start; }
+.jadibo-trigger {
+    position: relative;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 2px solid var(--action-orange);
+    background: var(--surface);
     cursor: pointer;
-    transition: transform 0.3s ease, filter 0.3s ease;
+    padding: 4px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--shadow);
 }
-.bot-icon-floating:hover { transform: scale(1.1) translateY(-5px); filter: drop-shadow(0 10px 12px rgba(0,0,0,0.4)); }
+.jadibo-trigger:hover { transform: scale(1.08); box-shadow: 0 6px 16px rgba(232,93,4,0.35); }
+.jadibo-avatar { width: 100%; height: 100%; object-fit: contain; display: block; }
 .bot-jump { animation: jump 0.4s ease; }
+
+/* Pulso chamativo para convidar o clique */
+.jadibo-pulse {
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 2px solid var(--action-orange);
+    animation: jadiboPulse 2.2s ease-out infinite;
+    pointer-events: none;
+}
+@keyframes jadiboPulse {
+    0%   { transform: scale(1); opacity: 0.7; }
+    70%  { transform: scale(1.45); opacity: 0; }
+    100% { transform: scale(1.45); opacity: 0; }
+}
+
+.jadibo-panel {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 260px;
+    background: var(--primary-blue);
+    color: var(--white);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: var(--shadow-strong);
+    z-index: 80;
+    animation: slideUp 0.25s ease;
+}
+.jadibo-panel-arrow {
+    position: absolute;
+    top: -7px; right: 20px;
+    width: 14px; height: 14px;
+    background: var(--primary-blue);
+    transform: rotate(45deg);
+}
+.jadibo-panel-msg { font-size: 13px; line-height: 1.5; }
+.jadibo-panel-next {
+    margin-top: 10px;
+    width: 100%;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: var(--white);
+    border-radius: 8px;
+    padding: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.jadibo-panel-next:hover { background: rgba(255,255,255,0.24); }
+
+/* Botão Reiniciar (rodapé) */
+.btn-ghost { background: transparent; border: 1px solid transparent; color: var(--text-muted); }
+.btn-danger-light:hover { background: var(--danger-tint); color: var(--danger); border-color: transparent; }
 
 /* Accessibility: keyboard focus visibility */
 a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
@@ -778,7 +832,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width: 768px) {
     .sidebar { display: none; }
     .bottom-nav { left: 0; padding: 15px; }
-    .floating-bot { display: none; }
     .main-content { padding: 15px; }
     .multi-select-chip span.chip-label { max-width: 90px; }
     .step-toolbar { flex-wrap: wrap; }
@@ -789,3 +842,183 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 @keyframes jump { 0% { transform: translateY(0); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0); } }
 @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes toastOut { to { opacity: 0; transform: translateX(20px); } }
+
+/* ================= Editor de Fluxo embutido (Passo 7) ================= */
+.inline-flow-editor {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
+.ife-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--primary-blue);
+    color: var(--white);
+    gap: 10px;
+}
+.ife-title { font-size: 13.5px; font-weight: 700; }
+.ife-actions { display: flex; gap: 6px; }
+.ife-btn {
+    padding: 6px 11px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1);
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.ife-btn:hover { background: rgba(255,255,255,0.22); }
+.ife-btn-primary { background: var(--action-orange); border-color: var(--action-orange-dark); }
+.ife-btn-primary:hover { background: var(--action-orange-dark); }
+
+.ife-layout { display: flex; height: 460px; }
+
+/* Paleta de ações */
+.ife-palette {
+    width: 130px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+.ife-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 6px;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-dark);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: grab;
+    transition: background 0.15s;
+    text-align: center;
+}
+.ife-action:hover { background: var(--surface-hover); }
+.ife-action-icon { font-size: 17px; color: var(--action-orange); }
+
+/* Canvas Drawflow */
+.ife-canvas-wrap { flex: 1; position: relative; overflow: hidden; background: var(--bg-light); }
+.ife-canvas {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, var(--canvas-dot, #d3dbe3) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+[data-theme="dark"] .ife-canvas {
+    background-image: radial-gradient(circle, #26303f 1px, transparent 1px);
+}
+.ife-zoom {
+    position: absolute;
+    bottom: 10px; left: 10px;
+    display: flex; flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    z-index: 15;
+}
+.ife-zoom button {
+    border: none;
+    background: transparent;
+    color: var(--text-dark);
+    font-size: 14px; font-weight: 700;
+    width: 34px; height: 34px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.12s;
+}
+.ife-zoom button:last-child { border-bottom: none; }
+.ife-zoom button:hover { background: var(--surface-hover); }
+.ife-validation {
+    position: absolute;
+    bottom: 10px; right: 10px;
+    max-width: 280px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-size: 11.5px;
+    box-shadow: var(--shadow);
+    z-index: 15;
+    cursor: default;
+}
+.ife-validation.ok { border-color: var(--success); color: var(--success); }
+.ife-validation.warn { border-color: var(--warning); color: var(--warning); }
+.ife-offline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 24px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* Sidebar de filas */
+.ife-sidebar {
+    width: 160px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border-color);
+    padding: 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ife-sidebar-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 2px; }
+.ife-sidebar-hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+.ife-fila-item {
+    display: flex; flex-direction: column; gap: 2px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--bg-light);
+    text-align: left;
+    cursor: pointer;
+    transition: 0.15s;
+    font-family: inherit;
+}
+.ife-fila-item:hover { border-color: var(--action-orange); background: var(--surface); }
+.ife-fila-item strong { font-size: 12px; color: var(--text-dark); }
+.ife-fila-item span { font-size: 10.5px; color: var(--text-muted); }
+
+/* Nós do Drawflow dentro do editor embutido */
+#ifeCanvas .drawflow-node {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 0;
+    width: 220px;
+    color: var(--text-dark);
+}
+#ifeCanvas .drawflow-node.selected { border-color: var(--action-orange); box-shadow: 0 0 0 3px rgba(232,93,4,0.15); }
+#ifeCanvas .drawflow-node .input, #ifeCanvas .drawflow-node .output {
+    width: 14px; height: 14px;
+    background: var(--action-orange);
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--border-color-strong);
+    border-radius: 50%;
+}
+#ifeCanvas .drawflow-node .inputs { position: absolute; left: -8px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+#ifeCanvas .drawflow-node .outputs { position: absolute; right: -8px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 20px; }
+#ifeCanvas .drawflow-node.node-menu .outputs { top: auto; bottom: 50px; height: auto; justify-content: flex-start; }
+#ifeCanvas .connection .main-path { stroke: var(--edge-color, #8296ad); stroke-width: 2.5px; fill: none; }
+#ifeCanvas .connection .main-path.selected, #ifeCanvas .connection .main-path:hover { stroke: var(--action-orange); }
