@@ -163,8 +163,31 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 
 /* ================= Step Toolbar (Conceito / Modelos / Dicas / Anexos) ================= */
 /* Subtítulo do cabeçalho: define expectativa de tempo/esforço */
-.header-title { min-width: 0; }
+.header-title { min-width: 0; flex: 1; }
 .header-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+
+/* Grupo de ações do cabeçalho (tema + reiniciar) */
+.header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* Botão de reinício: visível mas não ameaçador — perigo está no confirm() */
+.btn-reset-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--danger);
+    background: transparent;
+    color: var(--danger);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+    white-space: nowrap;
+    font-family: inherit;
+}
+.btn-reset-header:hover { background: var(--danger-tint); }
+[data-theme="dark"] .btn-reset-header { border-color: var(--danger); color: var(--danger); }
 
 /* Cabeçalho da etapa: título/descrição à esquerda, ajuda ao lado */
 .step-header {
@@ -856,15 +879,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 11px 16px;
     background: var(--primary-blue);
     color: var(--white);
-    gap: 10px;
 }
+.ife-topbar-left { display: flex; flex-direction: column; gap: 2px; }
 .ife-title { font-size: 13.5px; font-weight: 700; }
-.ife-actions { display: flex; gap: 6px; }
+.ife-hint { font-size: 11px; opacity: 0.75; }
+.ife-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .ife-btn {
-    padding: 6px 11px;
+    padding: 6px 12px;
     border-radius: 6px;
     border: 1px solid rgba(255,255,255,0.3);
     background: rgba(255,255,255,0.1);
@@ -873,12 +899,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s;
+    white-space: nowrap;
 }
 .ife-btn:hover { background: rgba(255,255,255,0.22); }
 .ife-btn-primary { background: var(--action-orange); border-color: var(--action-orange-dark); }
 .ife-btn-primary:hover { background: var(--action-orange-dark); }
 
-.ife-layout { display: flex; height: 460px; }
+.ife-layout { display: flex; height: 520px; }
 
 /* Paleta de ações */
 .ife-palette {
@@ -895,33 +922,34 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    padding: 10px 6px;
+    padding: 11px 6px;
     border: none;
     border-bottom: 1px solid var(--border-color);
     background: var(--surface);
     color: var(--text-dark);
     font-size: 11px;
     font-weight: 600;
-    cursor: grab;
+    cursor: pointer;
     transition: background 0.15s;
     text-align: center;
+    font-family: inherit;
 }
 .ife-action:hover { background: var(--surface-hover); }
-.ife-action-icon { font-size: 17px; color: var(--action-orange); }
+.ife-action-icon { font-size: 18px; color: var(--action-orange); }
 
 /* Canvas Drawflow */
 .ife-canvas-wrap { flex: 1; position: relative; overflow: hidden; background: var(--bg-light); }
 .ife-canvas {
     position: absolute; inset: 0;
-    background-image: radial-gradient(circle, var(--canvas-dot, #d3dbe3) 1px, transparent 1px);
+    background-image: radial-gradient(circle, var(--canvas-dot, #d3dbe3) 1.2px, transparent 1.2px);
     background-size: 22px 22px;
 }
 [data-theme="dark"] .ife-canvas {
-    background-image: radial-gradient(circle, #26303f 1px, transparent 1px);
+    background-image: radial-gradient(circle, #26303f 1.2px, transparent 1.2px);
 }
 .ife-zoom {
     position: absolute;
-    bottom: 10px; left: 10px;
+    bottom: 12px; left: 12px;
     display: flex; flex-direction: column;
     background: var(--surface);
     border: 1px solid var(--border-color);
@@ -934,44 +962,48 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     border: none;
     background: transparent;
     color: var(--text-dark);
-    font-size: 14px; font-weight: 700;
-    width: 34px; height: 34px;
+    font-size: 15px; font-weight: 700;
+    width: 36px; height: 36px;
     cursor: pointer;
     border-bottom: 1px solid var(--border-color);
     transition: background 0.12s;
+    font-family: inherit;
 }
 .ife-zoom button:last-child { border-bottom: none; }
 .ife-zoom button:hover { background: var(--surface-hover); }
 .ife-validation {
     position: absolute;
-    bottom: 10px; right: 10px;
-    max-width: 280px;
+    bottom: 12px; right: 12px;
+    max-width: 300px;
     background: var(--surface);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 7px 11px;
+    padding: 8px 12px;
     font-size: 11.5px;
     box-shadow: var(--shadow);
     z-index: 15;
     cursor: default;
+    line-height: 1.4;
 }
-.ife-validation.ok { border-color: var(--success); color: var(--success); }
+.ife-validation.ok  { border-color: var(--success); color: var(--success); }
 .ife-validation.warn { border-color: var(--warning); color: var(--warning); }
 .ife-offline {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    padding: 24px;
+    padding: 32px;
     text-align: center;
     font-size: 13px;
     color: var(--text-muted);
-    line-height: 1.5;
+    line-height: 1.6;
+    flex-direction: column;
+    gap: 10px;
 }
 
 /* Sidebar de filas */
 .ife-sidebar {
-    width: 160px;
+    width: 170px;
     flex-shrink: 0;
     background: var(--surface);
     border-left: 1px solid var(--border-color);
@@ -981,8 +1013,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     flex-direction: column;
     gap: 6px;
 }
-.ife-sidebar-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 2px; }
-.ife-sidebar-hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+.ife-sidebar-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ife-sidebar-hint { font-size: 11px; color: var(--text-muted); line-height: 1.45; }
 .ife-fila-item {
     display: flex; flex-direction: column; gap: 2px;
     width: 100%;
@@ -997,9 +1038,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .ife-fila-item:hover { border-color: var(--action-orange); background: var(--surface); }
 .ife-fila-item strong { font-size: 12px; color: var(--text-dark); }
-.ife-fila-item span { font-size: 10.5px; color: var(--text-muted); }
+.ife-fila-item span { font-size: 10.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Nós do Drawflow dentro do editor embutido */
+/* ── Tema dos nós Drawflow dentro do editor embutido ── */
 #ifeCanvas .drawflow-node {
     background: var(--surface);
     border: 1px solid var(--border-color);
@@ -1009,16 +1050,43 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     width: 220px;
     color: var(--text-dark);
 }
-#ifeCanvas .drawflow-node.selected { border-color: var(--action-orange); box-shadow: 0 0 0 3px rgba(232,93,4,0.15); }
-#ifeCanvas .drawflow-node .input, #ifeCanvas .drawflow-node .output {
+#ifeCanvas .drawflow-node.selected { border-color: var(--action-orange); box-shadow: 0 0 0 3px rgba(232,93,4,0.15), var(--shadow); }
+#ifeCanvas .drawflow-node.node-inicio   { border-top: 3px solid #1c6dd0; }
+#ifeCanvas .drawflow-node.node-menu     { border-top: 3px solid var(--action-orange); }
+#ifeCanvas .drawflow-node.node-mensagem { border-top: 3px solid #1c6dd0; }
+#ifeCanvas .drawflow-node.node-entrada  { border-top: 3px solid #1c8a4b; }
+#ifeCanvas .drawflow-node.node-condicao { border-top: 3px solid #7b3fe4; }
+#ifeCanvas .drawflow-node.node-aguardar { border-top: 3px solid #7b3fe4; }
+#ifeCanvas .drawflow-node.node-transferir { border-top: 3px solid #1c8a4b; }
+#ifeCanvas .drawflow-node.node-encerrar { border-top: 3px solid var(--danger); }
+
+#ifeCanvas .drawflow-node .input,
+#ifeCanvas .drawflow-node .output {
     width: 14px; height: 14px;
     background: var(--action-orange);
     border: 2px solid var(--surface);
-    box-shadow: 0 0 0 1px var(--border-color-strong);
+    box-shadow: 0 0 0 1.5px var(--border-color-strong);
     border-radius: 50%;
+    cursor: crosshair;
 }
-#ifeCanvas .drawflow-node .inputs { position: absolute; left: -8px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: center; }
-#ifeCanvas .drawflow-node .outputs { position: absolute; right: -8px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 20px; }
+#ifeCanvas .drawflow-node .input:hover,
+#ifeCanvas .drawflow-node .output:hover { background: var(--action-orange-dark); transform: scale(1.2); }
+
+#ifeCanvas .drawflow-node .inputs {
+    position: absolute; left: -8px; top: 0;
+    height: 100%;
+    display: flex; flex-direction: column; justify-content: center;
+}
+#ifeCanvas .drawflow-node .outputs {
+    position: absolute; right: -8px; top: 0;
+    height: 100%;
+    display: flex; flex-direction: column; justify-content: center; gap: 20px;
+}
 #ifeCanvas .drawflow-node.node-menu .outputs { top: auto; bottom: 50px; height: auto; justify-content: flex-start; }
-#ifeCanvas .connection .main-path { stroke: var(--edge-color, #8296ad); stroke-width: 2.5px; fill: none; }
-#ifeCanvas .connection .main-path.selected, #ifeCanvas .connection .main-path:hover { stroke: var(--action-orange); }
+#ifeCanvas .drawflow-node.node-condicao .outputs { top: auto; bottom: 12px; height: 68px; justify-content: space-around; gap: 0; }
+
+#ifeCanvas .connection .main-path { stroke: #8296ad; stroke-width: 2.5px; fill: none; }
+[data-theme="dark"] #ifeCanvas .connection .main-path { stroke: #5b6b82; }
+#ifeCanvas .connection .main-path.selected,
+#ifeCanvas .connection .main-path:hover { stroke: var(--action-orange); }
+#ifeCanvas .drawflow-delete { background: var(--danger); border: 2px solid var(--surface); color: #fff; border-radius: 50%; font-family: inherit; line-height: 24px; }

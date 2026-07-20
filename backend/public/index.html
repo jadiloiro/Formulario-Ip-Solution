@@ -60,10 +60,15 @@
                 <h1>Configure sua operação em poucos passos.</h1>
                 <p class="header-sub">Leva cerca de 10 minutos — e seu progresso é salvo automaticamente, então pode parar e continuar quando quiser.</p>
             </div>
-            <button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
-                <span class="theme-toggle-icon">🌙</span>
-                <span class="theme-toggle-label">Tema escuro</span>
-            </button>
+            <div class="header-actions">
+                <button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
+                    <span class="theme-toggle-icon">🌙</span>
+                    <span class="theme-toggle-label">Tema escuro</span>
+                </button>
+                <button type="button" class="btn-reset-header" id="btnReset" title="Apagar todos os dados e recomeçar do zero">
+                    🗑 Excluir dados e reiniciar
+                </button>
+            </div>
         </header>
 
         <!-- Top Wizard -->
@@ -363,62 +368,63 @@
                 <div class="step-header">
                     <div class="step-header-text">
                         <h2 class="step-title">7. BOT</h2>
-                        <p class="step-desc">O BOT é o menu automático que o cliente vê ao mandar mensagem (ex: "Digite 1 para Comercial"). Monte-o aqui com as filas já cadastradas.</p>
+                        <p class="step-desc">Monte o fluxo do seu BOT arrastando os blocos da paleta para o quadro e conectando-os. As filas, agentes e horários cadastrados nas etapas anteriores já aparecem automaticamente.</p>
                     </div>
                 </div>
 
-                <!-- Editor de fluxo embutido -->
+                <!-- ── Editor visual embutido (motor: Drawflow) ── -->
                 <div class="inline-flow-editor" id="inlineFlowEditor">
+
+                    <!-- Barra superior do editor -->
                     <div class="ife-topbar">
-                        <span class="ife-title">🎨 Editor Visual do Fluxo</span>
+                        <div class="ife-topbar-left">
+                            <span class="ife-title">🎨 Editor Visual do Fluxo do BOT</span>
+                            <span class="ife-hint">Arraste da paleta · Conecte as bolinhas · Delete para remover</span>
+                        </div>
                         <div class="ife-actions">
-                            <button type="button" class="ife-btn" id="ifeRefreshBtn" title="Atualizar dados do formulário">🔄</button>
-                            <button type="button" class="ife-btn" id="ifeClearBtn" title="Limpar quadro">🗑</button>
-                            <button type="button" class="ife-btn ife-btn-primary" id="ifeCopyBtn" title="Copiar resumo">📋 Resumo</button>
+                            <button type="button" class="ife-btn" id="ifeRefreshBtn" title="Recarregar filas, agentes e horários do formulário">🔄 Atualizar dados</button>
+                            <button type="button" class="ife-btn" id="ifeClearBtn" title="Limpar todo o quadro e começar do zero">🗑 Limpar</button>
+                            <button type="button" class="ife-btn ife-btn-primary" id="ifeCopyBtn" title="Copiar um resumo em texto do fluxo montado">📋 Copiar resumo</button>
                         </div>
                     </div>
+
+                    <!-- Layout: paleta | canvas | sidebar de filas -->
                     <div class="ife-layout">
-                        <nav class="ife-palette" id="ifePalette" aria-label="Ações do fluxo"></nav>
+
+                        <!-- Paleta de ações (preenchida via JS) -->
+                        <nav class="ife-palette" id="ifePalette" aria-label="Ações disponíveis para o fluxo"></nav>
+
+                        <!-- Quadro principal -->
                         <div class="ife-canvas-wrap">
                             <div class="ife-canvas" id="ifeCanvas"></div>
                             <div class="ife-zoom">
-                                <button type="button" id="ifeZoomIn">+</button>
-                                <button type="button" id="ifeZoomOut">−</button>
-                                <button type="button" id="ifeZoomReset">⛶</button>
+                                <button type="button" id="ifeZoomIn" title="Aumentar zoom">+</button>
+                                <button type="button" id="ifeZoomOut" title="Reduzir zoom">−</button>
+                                <button type="button" id="ifeZoomReset" title="Enquadrar tudo">⛶</button>
                             </div>
                             <div class="ife-validation" id="ifeValidation"></div>
                         </div>
+
+                        <!-- Barra lateral: filas do formulário -->
                         <aside class="ife-sidebar">
-                            <h4 class="ife-sidebar-title">Filas <span id="ifeFilasCount">0</span></h4>
-                            <p class="ife-sidebar-hint hidden" id="ifeFilasHint">Cadastre filas no Passo 1.</p>
+                            <h4 class="ife-sidebar-title">
+                                Filas do formulário
+                                <span class="fc-count-badge" id="ifeFilasCount">0</span>
+                            </h4>
+                            <p class="ife-sidebar-hint" id="ifeFilasHint">Cadastre filas no Passo 1 e clique em "Atualizar dados".</p>
                             <div id="ifeFilasList"></div>
                         </aside>
-                    </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Mensagem inicial do menu</label>
-                    <input type="text" class="form-control" id="botMensagemInicial" value="Olá, bem-vindo(a) a *Nome da Empresa*! Para agilizarmos o seu atendimento, digite o número da opção desejada:">
-                </div>
+                    </div><!-- /ife-layout -->
+                </div><!-- /inline-flow-editor -->
 
-                <table class="dynamic-table">
-                    <thead><tr><th style="width:46px">Nº</th><th>Texto da opção *</th><th>Fila de destino *</th><th>Ações</th></tr></thead>
-                    <tbody id="botOpcoesTableBody">
-                        <tr>
-                            <td class="opcao-numero">1</td>
-                            <td><input type="text" class="form-control opcao-texto" placeholder="Ex: Comercial" required></td>
-                            <td><select class="form-control opcao-fila"><option value="">Selecione a fila</option></select></td>
-                            <td><button type="button" class="btn-delete" aria-label="Remover opção">🗑️</button></td>
-                        </tr>
-                    </tbody>
-                </table>
-                <button type="button" class="btn-add" onclick="addBotOpcao()">+ Adicionar opção do menu</button>
+                <!-- Elementos ocultos de compatibilidade (usados pelo rascunho e listeners do JS) -->
+                <input type="hidden" id="botMensagemInicial" value="Olá, bem-vindo(a) a *Nome da Empresa*! Para agilizarmos o seu atendimento, digite o número da opção desejada:">
+                <table hidden><tbody id="botOpcoesTableBody"></tbody></table>
+                <table hidden id="respostasTable"><tbody id="respostasTableBody"></tbody></table>
+                <button type="button" id="addRespostaBtn" hidden></button>
+                <div id="flowPreview" hidden></div>
 
-                <div class="flow-preview-wrap">
-                    <h3 class="flow-preview-title">🔀 Pré-visualização do fluxo</h3>
-                    <p class="step-desc" style="margin-bottom:16px;">Atualizado automaticamente com base nas Filas (Passo 1), Agentes (Passo 2) e Horários (Passo 3).</p>
-                    <div class="flow-preview" id="flowPreview"></div>
-                </div>
             </div>
 
         </form>
@@ -429,7 +435,6 @@
         <button class="btn btn-outline" id="btnPrev" onclick="prevStep()">← Voltar</button>
         <div class="bottom-nav-right">
             <span class="draft-status" id="draftStatus" aria-live="polite"></span>
-            <button class="btn btn-ghost btn-danger-light" id="btnReset" type="button" title="Apagar todos os dados e recomeçar do zero">🗑 Reiniciar</button>
             <button class="btn btn-outline" id="btnSaveDraft" type="button">💾 Salvar rascunho</button>
             <button class="btn btn-primary" id="btnNext" onclick="nextStep()">Salvar e continuar →</button>
         </div>

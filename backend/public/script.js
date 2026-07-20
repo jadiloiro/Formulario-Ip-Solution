@@ -217,7 +217,11 @@ function showStep(step) {
     renderStepToolbar(step);
     if (step === totalSteps) {
         renderFlowPreview();
-        if (typeof ifeInit === 'function') ifeInit(); // editor de fluxo embutido
+        // Adiar para o próximo frame garante que o display:none foi removido antes
+        // de o Drawflow tentar medir o canvas (evita erros de addEventListener em nulo)
+        requestAnimationFrame(() => {
+            if (typeof ifeInit === 'function') ifeInit();
+        });
     }
     updateProgress(step);
     localStorage.setItem(STORAGE.STEP, step);
