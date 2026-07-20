@@ -765,73 +765,125 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .toast.success { background: var(--success); }
 .toast.error { background: var(--danger); }
 
-/* ================= Jadibô compacto (ícone + painel de dicas) ================= */
-.jadibo-wrap { position: relative; flex-shrink: 0; align-self: flex-start; }
+/* ── Jadibô: ícone compacto + painel interativo por etapa ── */
+.jadibo-wrap { position: relative; flex-shrink: 0; align-self: center; margin-left: 4px; }
+
 .jadibo-trigger {
     position: relative;
-    width: 52px; height: 52px;
+    width: 36px; height: 36px;
     border-radius: 50%;
-    border: 2px solid var(--action-orange);
-    background: var(--surface);
+    border: none;
+    background: var(--action-orange);
     cursor: pointer;
-    padding: 4px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: var(--shadow);
+    padding: 3px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    box-shadow: 0 2px 8px rgba(232,93,4,0.5);
 }
-.jadibo-trigger:hover { transform: scale(1.08); box-shadow: 0 6px 16px rgba(232,93,4,0.35); }
-.jadibo-avatar { width: 100%; height: 100%; object-fit: contain; display: block; }
+.jadibo-trigger:hover { transform: scale(1.14) rotate(-6deg); box-shadow: 0 5px 18px rgba(232,93,4,0.65); }
+.jadibo-avatar { width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 50%; }
 .bot-jump { animation: jump 0.4s ease; }
 
-/* Pulso chamativo para convidar o clique */
+/* Anel laranja pulsante */
 .jadibo-pulse {
-    position: absolute;
-    inset: -2px;
+    position: absolute; inset: -4px;
     border-radius: 50%;
     border: 2px solid var(--action-orange);
-    animation: jadiboPulse 2.2s ease-out infinite;
+    animation: jadiboPulse 2s ease-out infinite;
     pointer-events: none;
 }
 @keyframes jadiboPulse {
-    0%   { transform: scale(1); opacity: 0.7; }
-    70%  { transform: scale(1.45); opacity: 0; }
-    100% { transform: scale(1.45); opacity: 0; }
+    0%   { transform: scale(1); opacity: 0.75; }
+    65%  { transform: scale(1.7); opacity: 0; }
+    100% { transform: scale(1.7); opacity: 0; }
 }
 
+/* Badge de contagem de dicas */
+.jadibo-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--primary-blue);
+    color: #fff;
+    font-size: 9px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--surface);
+    pointer-events: none;
+    line-height: 1;
+}
+
+/* Painel de dicas */
 .jadibo-panel {
     position: absolute;
-    top: calc(100% + 12px);
-    right: 0;
-    width: 260px;
+    top: calc(100% + 10px); right: 0;
+    width: 286px;
     background: var(--primary-blue);
     color: var(--white);
-    border-radius: 12px;
-    padding: 14px;
-    box-shadow: var(--shadow-strong);
-    z-index: 80;
-    animation: slideUp 0.25s ease;
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 14px 36px rgba(0,43,94,0.38);
+    z-index: 200;
+    animation: jadiboSlideIn 0.22s cubic-bezier(0.22,1,0.36,1);
+}
+[data-theme="dark"] .jadibo-panel { background: #1a3358; box-shadow: 0 14px 36px rgba(0,0,0,0.6); }
+@keyframes jadiboSlideIn {
+    from { opacity: 0; transform: translateY(-10px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .jadibo-panel-arrow {
     position: absolute;
-    top: -7px; right: 20px;
-    width: 14px; height: 14px;
+    top: -6px; right: 12px;
+    width: 12px; height: 12px;
     background: var(--primary-blue);
     transform: rotate(45deg);
+    border-radius: 2px;
 }
-.jadibo-panel-msg { font-size: 13px; line-height: 1.5; }
+[data-theme="dark"] .jadibo-panel-arrow { background: #1a3358; }
+
+/* Cabeçalho do painel */
+.jadibo-panel-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 14px 12px;
+    background: rgba(255,255,255,0.07);
+    border-bottom: 1px solid rgba(255,255,255,0.14);
+}
+.jadibo-panel-avatar {
+    width: 40px; height: 40px;
+    object-fit: contain; flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    padding: 3px;
+}
+.jadibo-panel-name { font-size: 12.5px; font-weight: 800; }
+.jadibo-panel-step { font-size: 10.5px; opacity: 0.7; margin-top: 2px; }
+
+/* Corpo da dica */
+.jadibo-panel-body { padding: 14px; }
+.jadibo-panel-msg { font-size: 13px; line-height: 1.58; }
+.jadibo-panel-msg strong { color: #ffd280; }
+
+/* Rodapé com contador e botão */
+.jadibo-panel-footer {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 14px 14px;
+}
+.jadibo-counter { font-size: 10.5px; opacity: 0.6; white-space: nowrap; }
 .jadibo-panel-next {
-    margin-top: 10px;
-    width: 100%;
+    flex: 1;
     background: rgba(255,255,255,0.14);
-    border: 1px solid rgba(255,255,255,0.3);
+    border: 1px solid rgba(255,255,255,0.26);
     color: var(--white);
     border-radius: 8px;
-    padding: 7px;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 7px 12px;
+    font-size: 12px; font-weight: 700;
     cursor: pointer;
     transition: background 0.15s;
+    font-family: inherit;
+    text-align: center;
 }
-.jadibo-panel-next:hover { background: rgba(255,255,255,0.24); }
+.jadibo-panel-next:hover { background: rgba(255,255,255,0.28); }
 
 /* Botão Reiniciar (rodapé) */
 .btn-ghost { background: transparent; border: 1px solid transparent; color: var(--text-muted); }

@@ -1,0 +1,13 @@
+<svg width="180" height="56" viewBox="0 0 180 56" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IP Solution">
+  <g fill="none" fill-rule="evenodd">
+    <!-- swoosh (orange) -->
+    <path d="M45 6c8.5 2 14.5 9.7 14.5 19s-6 17-14.5 19c9.8-1.6 17-10 17-19.9C62 14.2 54.8 5.7 45 6z" fill="var(--logo-accent)"/>
+    <!-- i dot + stem -->
+    <rect x="6" y="16" width="7" height="26" rx="1.5" fill="var(--logo-mark)"/>
+    <rect x="6" y="4" width="7" height="7" rx="1.5" fill="var(--logo-mark)"/>
+    <!-- P -->
+    <path d="M20 4h16.5c7.5 0 13 5.3 13 12.6 0 7.3-5.5 12.6-13 12.6H27v13H20V4zm7 6.4v11.8h9c3.6 0 6-2.4 6-5.9s-2.4-5.9-6-5.9h-9z" fill="var(--logo-mark)"/>
+    <!-- wordmark -->
+    <text x="2" y="52" font-family="'Segoe UI', Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1.5" fill="var(--logo-word)">SOLUTION</text>
+  </g>
+</svg>

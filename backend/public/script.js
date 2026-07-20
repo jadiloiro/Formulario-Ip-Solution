@@ -425,34 +425,47 @@ function resetAllData() {
     showToast('Tudo limpo! Começando do zero. 🧹', 'success');
 }
 
-/* ========================= Jadibô compacto (painel de dicas) ========================= */
+/* ========================= Jadibô compacto (painel de dicas interativo por etapa) ========================= */
 const jadiboTipIndex = {};
 
+const STEP_NOMES = {
+    1: 'Filas', 2: 'Agentes', 3: 'Horários', 4: 'Configurações',
+    5: 'Números', 6: 'Agenda', 7: 'BOT'
+};
+
 function jadiboSetIntro() {
-    const botMessage = document.getElementById('botMessage');
-    if (botMessage) {
-        botMessage.innerHTML = `<strong>Dica do Jadibô:</strong><br>${botTips[currentStep] || 'Vamos configurar juntos!'}`;
-    }
+    const dicas = (stepHelp[currentStep] && stepHelp[currentStep].dicas) || extraTips;
     jadiboTipIndex[currentStep] = 0;
+    _jadiboRender(0, dicas);
 }
 
 function jadiboNextTip() {
-    const botImage = document.getElementById('jadiboAvatar');
-    const botMessage = document.getElementById('botMessage');
-    if (botImage) {
-        botImage.classList.add('bot-jump');
-        setTimeout(() => botImage.classList.remove('bot-jump'), 400);
-    }
-    const dicas = (stepHelp[currentStep] && stepHelp[currentStep].dicas && stepHelp[currentStep].dicas.length)
-        ? stepHelp[currentStep].dicas
-        : extraTips;
-    const idx = (jadiboTipIndex[currentStep] || 0) % dicas.length;
-    if (botMessage) botMessage.innerHTML = `<strong>Dica ${idx + 1} de ${dicas.length}:</strong><br>${dicas[idx]}`;
-    jadiboTipIndex[currentStep] = idx + 1;
+    const img = document.getElementById('jadiboAvatar');
+    if (img) { img.classList.add('bot-jump'); setTimeout(() => img.classList.remove('bot-jump'), 400); }
+
+    const dicas = (stepHelp[currentStep] && stepHelp[currentStep].dicas) || extraTips;
+    // jadiboSetIntro already rendered index 0 and left index at 0;
+    // each "next" advances to the next slot (wraps around)
+    const current = jadiboTipIndex[currentStep] || 0;
+    const nextIdx = (current + 1) % dicas.length;
+    jadiboTipIndex[currentStep] = nextIdx;
+    _jadiboRender(nextIdx, dicas);
+}
+
+function _jadiboRender(idx, dicas) {
+    const msg     = document.getElementById('botMessage');
+    const counter = document.getElementById('jadiboCounter');
+    const badge   = document.getElementById('jadiboBadge');
+    const stepEl  = document.getElementById('jadiboPanelStep');
+
+    if (msg)     msg.innerHTML  = dicas[idx] || '';
+    if (counter) counter.textContent = `Dica ${idx + 1} de ${dicas.length}`;
+    if (badge)   badge.textContent   = dicas.length;
+    if (stepEl)  stepEl.textContent  = `Passo ${currentStep}: ${STEP_NOMES[currentStep] || ''}`;
 }
 
 function jadiboTogglePanel(forceClose = false) {
-    const panel = document.getElementById('jadiboPanel');
+    const panel   = document.getElementById('jadiboPanel');
     const trigger = document.getElementById('jadiboTrigger');
     if (!panel || !trigger) return;
     const willOpen = forceClose ? false : panel.classList.contains('hidden');
