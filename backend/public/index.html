@@ -6,6 +6,7 @@
     <title>Configuração do Atendimento - IP Solution</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css">
     <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <script>
@@ -36,13 +37,34 @@
           </button>
 
         <ul class="sidebar-menu" id="sidebarMenu">
-            <li class="active" data-step="1"><span class="menu-icon" aria-hidden="true">👥</span><span>1. Filas</span></li>
-            <li data-step="2"><span class="menu-icon" aria-hidden="true">🧑‍💻</span><span>2. Agentes</span></li>
-            <li data-step="3"><span class="menu-icon" aria-hidden="true">🕒</span><span>3. Horários</span></li>
-            <li data-step="4"><span class="menu-icon" aria-hidden="true">⚙️</span><span>4. Configurações</span></li>
-            <li data-step="5"><span class="menu-icon" aria-hidden="true">📞</span><span>5. Números</span></li>
-            <li data-step="6"><span class="menu-icon" aria-hidden="true">📅</span><span>6. Agenda</span></li>
-            <li data-step="7"><span class="menu-icon" aria-hidden="true">🤖</span><span>7. BOT</span></li>
+            <li class="active" data-step="1">
+                <i class="fa-solid fa-layer-group menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">1. Filas</span><span class="menu-sub">Grupos de atendimento</span></div>
+            </li>
+            <li data-step="2">
+                <i class="fa-solid fa-users menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">2. Agentes</span><span class="menu-sub">Usuários da plataforma</span></div>
+            </li>
+            <li data-step="3">
+                <i class="fa-solid fa-clock menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">3. Horários</span><span class="menu-sub">Expediente e ausências</span></div>
+            </li>
+            <li data-step="4">
+                <i class="fa-solid fa-sliders menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">4. Configurações</span><span class="menu-sub">Tempos e mensagens</span></div>
+            </li>
+            <li data-step="5">
+                <i class="fa-solid fa-mobile-screen menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">5. Números</span><span class="menu-sub">WhatsApp da empresa</span></div>
+            </li>
+            <li data-step="6">
+                <i class="fa-solid fa-address-book menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">6. Agenda</span><span class="menu-sub">Importar contatos</span></div>
+            </li>
+            <li data-step="7">
+                <i class="fa-solid fa-robot menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">7. BOT</span><span class="menu-sub">Fluxo automático</span></div>
+            </li>
         </ul>
 
         <!-- Barra de progresso geral -->
@@ -83,13 +105,13 @@
 
         <!-- Top Wizard -->
         <div class="top-wizard" id="topWizard">
-            <div class="wizard-step active" data-step="1"><div class="circle">1</div>Filas</div>
-            <div class="wizard-step" data-step="2"><div class="circle">2</div>Agentes</div>
-            <div class="wizard-step" data-step="3"><div class="circle">3</div>Horários</div>
-            <div class="wizard-step" data-step="4"><div class="circle">4</div>Configurações</div>
-            <div class="wizard-step" data-step="5"><div class="circle">5</div>Números</div>
-            <div class="wizard-step" data-step="6"><div class="circle">6</div>Agenda</div>
-            <div class="wizard-step" data-step="7"><div class="circle">7</div>BOT</div>
+            <div class="wizard-step active" data-step="1"><div class="circle"><i class="fa-solid fa-layer-group"></i></div>Filas</div>
+            <div class="wizard-step" data-step="2"><div class="circle"><i class="fa-solid fa-users"></i></div>Agentes</div>
+            <div class="wizard-step" data-step="3"><div class="circle"><i class="fa-solid fa-clock"></i></div>Horários</div>
+            <div class="wizard-step" data-step="4"><div class="circle"><i class="fa-solid fa-sliders"></i></div>Configurações</div>
+            <div class="wizard-step" data-step="5"><div class="circle"><i class="fa-solid fa-mobile-screen"></i></div>Números</div>
+            <div class="wizard-step" data-step="6"><div class="circle"><i class="fa-solid fa-address-book"></i></div>Agenda</div>
+            <div class="wizard-step" data-step="7"><div class="circle"><i class="fa-solid fa-robot"></i></div>BOT</div>
         </div>
 
         <!-- Step Toolbar: Conceito / Modelos / Dicas / Anexos -->

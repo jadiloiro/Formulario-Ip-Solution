@@ -77,15 +77,39 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 
 /* Sidebar (Light Mode) */
 .sidebar {
-    width: 250px;
+    width: 260px;
+    min-width: 260px;
     background-color: var(--surface);
     color: var(--text-dark);
-    padding: 20px;
+    padding: 20px 16px;
     display: flex;
     flex-direction: column;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
     border-right: 1px solid var(--border-color);
+    transition: width 0.28s cubic-bezier(0.4,0,0.2,1), transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    overflow: hidden;
 }
+/* Collapsed state — only icon visible */
+.sidebar.collapsed {
+    width: 64px;
+    min-width: 64px;
+}
+.sidebar.collapsed .menu-text,
+.sidebar.collapsed .menu-sub,
+.sidebar.collapsed .menu-label,
+.sidebar.collapsed .sidebar-progress-wrap,
+.sidebar.collapsed .sidebar-bot { display: none; }
+.sidebar.collapsed .sidebar-menu li { justify-content: center; padding: 12px 0; }
+.sidebar.collapsed .menu-icon { margin: 0; font-size: 17px; }
+.sidebar.collapsed .logo-btn .logo-text { display: none; }
+
+/* Nudge main content when sidebar is fixed */
+.main-content { margin-left: 260px; transition: margin-left 0.28s cubic-bezier(0.4,0,0.2,1); }
+.sidebar.collapsed ~ .main-content { margin-left: 64px; }
 
 /* Logo Interativa */
 /* Logo SVG button */
@@ -104,21 +128,36 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 /* Menu Lateral */
 .sidebar-menu { list-style: none; }
 .sidebar-menu li {
-    padding: 12px 15px;
-    margin-bottom: 8px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
     border-radius: var(--radius);
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 10px;
-    transition: 0.2s;
+    gap: 12px;
+    transition: background 0.18s, color 0.18s;
     color: var(--text-muted);
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
 }
 .sidebar-menu li:hover { background-color: var(--accent-tint-08); color: var(--primary-blue); }
 .sidebar-menu li.active { background-color: var(--primary-blue); color: var(--white); font-weight: bold; }
-.sidebar-menu li.step-done:not(.active) .menu-icon::after { content: ' ✓'; }
-.menu-icon { width: 18px; text-align: center; }
+.sidebar-menu li.step-done:not(.active) { color: var(--success); }
+.sidebar-menu li.step-done:not(.active) .menu-icon { color: var(--success); }
+
+/* Icon — Font Awesome */
+.menu-icon {
+    font-size: 15px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    transition: color 0.18s;
+}
+/* Title + subtitle two-line stack */
+.menu-text { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+.menu-label { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.menu-sub   { font-size: 10.5px; opacity: 0.7; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; }
 
 /* Barra de progresso geral */
 .sidebar-progress { margin: 10px 0 20px; }
@@ -339,7 +378,10 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .wizard-step.completed .circle::after { content: '✓'; }
 
 /* Form Card */
-.form-card { background: var(--surface); border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); margin-bottom: 80px; animation: fadeIn 0.4s ease; }
+.form-card { background: var(--surface); border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); margin-bottom: 80px; }
+/* Card entrance — added by JS on step change */
+.form-card.fade-enter { animation: fadeIn 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+.form-card.fade-exit  { animation: fadeOut 0.2s ease forwards; }
 .step-title { font-size: 22px; color: var(--primary-blue); margin-bottom: 5px; }
 .step-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
 
@@ -753,7 +795,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 
 /* Footer Navigation */
-.bottom-nav { position: fixed; bottom: 0; left: 250px; right: 0; background: var(--surface); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 10; }
+.bottom-nav { position: fixed; bottom: 0; left: 260px; right: 0; background: var(--surface); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 10; transition: left 0.28s cubic-bezier(0.4,0,0.2,1); }
+.sidebar.collapsed ~ * .bottom-nav { left: 64px; }
 .btn { padding: 12px 25px; border-radius: var(--radius); font-size: 14px; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
 .btn-outline { background: var(--surface); border: 1px solid var(--border-color); color: var(--text-dark); }
 .btn-outline:hover { background: var(--surface-hover); }
@@ -923,7 +966,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     .step-toolbar { flex-wrap: wrap; }
 }
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeOut { from { opacity: 1; transform: translateY(0); }  to { opacity: 0; transform: translateY(-8px); } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes jump { 0% { transform: translateY(0); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0); } }
 @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }

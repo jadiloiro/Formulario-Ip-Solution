@@ -173,58 +173,69 @@ function toggleTheme() {
 
 /* ========================= Navegação por Etapas ========================= */
 function showStep(step) {
-    document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
+    const oldCard = document.querySelector('.step-content:not(.hidden)');
 
-    document.getElementById(`step${step}`).classList.remove('hidden');
-    document.querySelector(`.wizard-step[data-step="${step}"]`).classList.add('active');
-    document.querySelector(`.sidebar-menu li[data-step="${step}"]`).classList.add('active');
-
-    // Leitores de tela anunciam qual passo está ativo
-    document.querySelectorAll('.wizard-step, .sidebar-menu li').forEach(el => {
-        el.setAttribute('aria-current', parseInt(el.getAttribute('data-step')) === step ? 'step' : 'false');
-    });
-
-    document.querySelectorAll('.wizard-step').forEach(el => {
-        const s = parseInt(el.getAttribute('data-step'));
-        el.classList.toggle('completed', completedSteps.has(s));
-    });
-    document.querySelectorAll('.sidebar-menu li').forEach(el => {
-        const s = parseInt(el.getAttribute('data-step'));
-        el.classList.toggle('step-done', completedSteps.has(s) && s !== step);
-    });
-
-    document.getElementById('btnPrev').style.visibility = step === 1 ? 'hidden' : 'visible';
-    document.getElementById('btnNext').innerText = step === totalSteps ? 'Finalizar e Enviar ✔️' : 'Salvar e continuar →';
-
-    // Move o foco para o título do passo: orienta leitores de tela e o olhar do usuário
-    const title = document.querySelector(`#step${step} .step-title`);
-    if (title) {
-        title.setAttribute('tabindex', '-1');
-        title.focus({ preventScroll: false });
-    }
-
-    // Encaixa a barra de ajuda (Conceito/Modelos/Anexos) + o Jadibô ao lado do título.
-    // Mover os nós preserva os listeners — uma única instância serve as 7 etapas.
-    const toolbar = document.getElementById('stepToolbar');
-    const jadibo = document.getElementById('jadiboWrap');
-    const headerTarget = document.querySelector(`#step${step} .step-header`);
-    if (toolbar && headerTarget) headerTarget.appendChild(toolbar);
-    if (jadibo && headerTarget) headerTarget.appendChild(jadibo);
-    jadiboTogglePanel(true); // fecha o painel ao trocar de etapa (dicas são por etapa)
-
-    renderStepToolbar(step);
-    if (step === totalSteps) {
-        renderFlowPreview();
-        // Adiar para o próximo frame garante que o display:none foi removido antes
-        // de o Drawflow tentar medir o canvas (evita erros de addEventListener em nulo)
-        requestAnimationFrame(() => {
-            if (typeof ifeInit === 'function') ifeInit();
+    // Fade-out old card first, then switch
+    const doSwitch = () => {
+        document.querySelectorAll('.step-content').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('fade-enter', 'fade-exit');
         });
+        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
+
+        const newCard = document.getElementById(`step${step}`);
+        if (newCard) {
+            newCard.classList.remove('hidden');
+            // Trigger reflow so animation restarts
+            void newCard.offsetWidth;
+            newCard.classList.add('fade-enter');
+        }
+        const wz = document.querySelector(`.wizard-step[data-step="${step}"]`);
+        if (wz) wz.classList.add('active');
+        const li = document.querySelector(`.sidebar-menu li[data-step="${step}"]`);
+        if (li) li.classList.add('active');
+
+        document.querySelectorAll('.wizard-step').forEach(el => {
+            const s = parseInt(el.getAttribute('data-step'));
+            el.classList.toggle('completed', completedSteps.has(s));
+        });
+        document.querySelectorAll('.sidebar-menu li').forEach(el => {
+            const s = parseInt(el.getAttribute('data-step'));
+            el.classList.toggle('step-done', completedSteps.has(s) && s !== step);
+        });
+
+        document.getElementById('btnPrev').style.visibility = step === 1 ? 'hidden' : 'visible';
+        document.getElementById('btnNext').innerText = step === totalSteps ? 'Finalizar e Enviar ✔️' : 'Salvar e continuar →';
+
+        const title = document.querySelector(`#step${step} .step-title`);
+        if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: false }); }
+
+        const toolbar = document.getElementById('stepToolbar');
+        const jadibo  = document.getElementById('jadiboWrap');
+        const headerTarget = document.querySelector(`#step${step} .step-header`);
+        if (toolbar && headerTarget) headerTarget.appendChild(toolbar);
+        if (jadibo  && headerTarget) headerTarget.appendChild(jadibo);
+        jadiboTogglePanel(true);
+
+        renderStepToolbar(step);
+        if (step === totalSteps) {
+            renderFlowPreview();
+            requestAnimationFrame(() => { if (typeof ifeInit === 'function') ifeInit(); });
+        }
+        updateProgress(step);
+        localStorage.setItem(STORAGE.STEP, step);
+    };
+
+    if (oldCard && !oldCard.classList.contains('hidden')) {
+        oldCard.classList.add('fade-exit');
+        oldCard.addEventListener('animationend', doSwitch, { once: true });
+        // Safety fallback if event never fires
+        setTimeout(doSwitch, 260);
+    } else {
+        doSwitch();
     }
-    updateProgress(step);
-    localStorage.setItem(STORAGE.STEP, step);
+    currentStep = step;
 }
 
 /* ========================= Toolbar: Conceito / Modelos / Dicas / Anexos ========================= */
@@ -1430,6 +1441,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') jadiboTogglePanel(true);
+
+    // ── Sidebar auto-colapso ──────────────────────────────────────────────────
+    const sidebar   = document.getElementById('sidebar') || document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    const bottomNav   = document.querySelector('.bottom-nav');
+    let collapseTimer = null;
+
+    function syncBottomNav() {
+        const w = sidebar && sidebar.classList.contains('collapsed') ? 64 : 260;
+        if (bottomNav) bottomNav.style.left = w + 'px';
+        if (mainContent) mainContent.style.marginLeft = w + 'px';
+    }
+
+    function collapseSidebar() {
+        if (sidebar) { sidebar.classList.add('collapsed'); syncBottomNav(); }
+    }
+    function expandSidebar() {
+        clearTimeout(collapseTimer);
+        if (sidebar) { sidebar.classList.remove('collapsed'); syncBottomNav(); }
+    }
+
+    if (sidebar) {
+        sidebar.addEventListener('mouseenter', expandSidebar);
+        sidebar.addEventListener('mouseleave', () => {
+            collapseTimer = setTimeout(collapseSidebar, 3000);
+        });
+        sidebar.addEventListener('focusin', expandSidebar);
+        sidebar.addEventListener('focusout', () => {
+            collapseTimer = setTimeout(collapseSidebar, 3000);
+        });
+    }
+    syncBottomNav();
     });
 
     document.getElementById('filasTableBody').addEventListener('input', function (e) {
