@@ -242,125 +242,211 @@
                 <div class="step-header">
                     <div class="step-header-text">
                         <h2 class="step-title">4. Configurações Gerais</h2>
-                        <p class="step-desc">Aqui você define os tempos de espera do sistema e as mensagens automáticas — com uma prévia de como cada uma aparecerá no WhatsApp do seu cliente. Tudo já vem com um padrão pronto: só mexa no que quiser mudar.</p>
+                        <p class="step-desc">Configure os tempos e mensagens do sistema. A prévia mostra exatamente como o cliente verá no WhatsApp.</p>
                     </div>
                 </div>
 
-                <!-- ============ Grupo A: Tempos e limites ============ -->
-                <section class="config-group is-open">
-                    <button type="button" class="config-group-title" aria-expanded="true">
-                        ⏱️ Tempos e limites
-                        <span class="cgt-arrow">▾</span>
-                    </button>
-                    <div class="config-group-body">
-                        <div class="config-item">
-                        <div class="config-item-info">
-                            <strong>Cliente parado no menu do BOT</strong>
-                            <p>Se o cliente recebe o menu e não responde, o sistema espera um tempo e toma uma ação.</p>
-                        </div>
-                        <fieldset class="radio-fieldset">
-                            <legend>Tempo de espera</legend>
-                            <div class="radio-group">
-                                <label><input type="radio" name="tempo_bot" value="padrao" checked> Manter 20 minutos</label>
-                                <label><input type="radio" name="tempo_bot" value="alterar"> Alterar tempo</label>
+                <!-- ══ Layout de 3 colunas: nav | formulário | prévia ══ -->
+                <div class="cfg4-shell">
+
+                    <!-- Coluna 1: Navegação de sub-passos -->
+                    <nav class="cfg4-nav" id="cfg4Nav">
+                        <button type="button" class="cfg4-nav-item active" data-sub="1">
+                            <span class="cfg4-nav-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+                            <span class="cfg4-nav-text">
+                                <strong>Sub-passo 1</strong>
+                                <span>Cliente no Menu BOT</span>
+                            </span>
+                            <i class="fa-solid fa-check cfg4-done hidden"></i>
+                        </button>
+                        <button type="button" class="cfg4-nav-item" data-sub="2">
+                            <span class="cfg4-nav-icon"><i class="fa-solid fa-person-walking-arrow-right"></i></span>
+                            <span class="cfg4-nav-text">
+                                <strong>Sub-passo 2</strong>
+                                <span>Abandono de Conversa</span>
+                            </span>
+                            <i class="fa-solid fa-check cfg4-done hidden"></i>
+                        </button>
+                        <button type="button" class="cfg4-nav-item" data-sub="3">
+                            <span class="cfg4-nav-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                            <span class="cfg4-nav-text">
+                                <strong>Sub-passo 3</strong>
+                                <span>Erros de Menu</span>
+                            </span>
+                            <i class="fa-solid fa-check cfg4-done hidden"></i>
+                        </button>
+                        <button type="button" class="cfg4-nav-item" data-sub="4">
+                            <span class="cfg4-nav-icon"><i class="fa-solid fa-comment-dots"></i></span>
+                            <span class="cfg4-nav-text">
+                                <strong>Sub-passo 4</strong>
+                                <span>Mensagens Automáticas</span>
+                            </span>
+                            <i class="fa-solid fa-check cfg4-done hidden"></i>
+                        </button>
+                        <button type="button" class="cfg4-nav-item" data-sub="5">
+                            <span class="cfg4-nav-icon"><i class="fa-solid fa-bolt"></i></span>
+                            <span class="cfg4-nav-text">
+                                <strong>Sub-passo 5</strong>
+                                <span>Respostas Rápidas</span>
+                            </span>
+                            <span class="cfg4-optional">opcional</span>
+                        </button>
+                    </nav>
+
+                    <!-- Coluna 2: Formulário do sub-passo ativo -->
+                    <div class="cfg4-form" id="cfg4Form">
+
+                        <!-- SUB 1: Cliente parado no BOT -->
+                        <div class="cfg4-panel active" id="cfg4-sub1">
+                            <h3 class="cfg4-panel-title"><i class="fa-solid fa-hourglass-half"></i> Cliente parado no menu do BOT</h3>
+                            <p class="cfg4-panel-desc">Se o cliente recebe o menu e não responde, o sistema espera um tempo e toma uma ação.</p>
+
+                            <fieldset class="cfg4-fieldset">
+                                <legend>⏱ Tempo de espera</legend>
+                                <label class="cfg4-radio"><input type="radio" name="tempo_bot" value="padrao" checked> <span>Manter <strong>20 minutos</strong> (padrão)</span></label>
+                                <label class="cfg4-radio"><input type="radio" name="tempo_bot" value="alterar"> <span>Alterar tempo</span></label>
+                            </fieldset>
+                            <div class="cfg4-conditional hidden" id="tempoBotCustom">
+                                <label class="cfg4-label">Quantos minutos esperar?</label>
+                                <div class="cfg4-number-wrap">
+                                    <input id="tempoBotInput" type="number" class="cfg4-number" min="1" value="20">
+                                    <span class="cfg4-suffix">minutos</span>
+                                </div>
                             </div>
-                        </fieldset>
-                        <div class="config-conditional hidden" id="tempoBotCustom">
-                            <label for="tempoBotInput">Quantos minutos esperar?</label>
-                            <input id="tempoBotInput" type="number" class="form-control input-minutos" min="1" value="20">
-                        </div>
-                        <fieldset class="radio-fieldset">
-                            <legend>Passado esse tempo, o que fazer?</legend>
-                            <div class="radio-group">
-                                <label><input type="radio" name="tempo_bot_acao" value="encerrar" checked> Encerrar o atendimento</label>
-                                <label><input type="radio" name="tempo_bot_acao" value="direcionar"> Direcionar para uma fila</label>
+
+                            <fieldset class="cfg4-fieldset">
+                                <legend>🔀 Após esse tempo, o que fazer?</legend>
+                                <label class="cfg4-radio"><input type="radio" name="tempo_bot_acao" value="encerrar" checked> <span>Encerrar o atendimento</span></label>
+                                <label class="cfg4-radio"><input type="radio" name="tempo_bot_acao" value="direcionar"> <span>Direcionar para uma fila</span></label>
+                            </fieldset>
+                            <div class="cfg4-conditional hidden" id="tempoBotFilaWrap">
+                                <label class="cfg4-label">Qual fila receberá o cliente?</label>
+                                <select id="tempoBotFila" class="cfg4-select select-fila-unica"><option value="">Selecione a fila</option></select>
                             </div>
-                        </fieldset>
-                        <div class="config-conditional hidden" id="tempoBotFilaWrap">
-                            <label for="tempoBotFila">Qual fila receberá o cliente?</label>
-                            <select id="tempoBotFila" class="form-control select-fila-unica"><option value="">Selecione a fila</option></select>
+
+                            <button type="button" class="cfg4-advance" onclick="cfg4Next(1)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
                         </div>
+
+                        <!-- SUB 2: Abandono de conversa -->
+                        <div class="cfg4-panel" id="cfg4-sub2">
+                            <h3 class="cfg4-panel-title"><i class="fa-solid fa-person-walking-arrow-right"></i> Cliente abandona a conversa</h3>
+                            <p class="cfg4-panel-desc">Se o cliente some no meio do atendimento, o sistema pode encerrar a conversa automaticamente.</p>
+
+                            <fieldset class="cfg4-fieldset">
+                                <legend>⏳ O que prefere?</legend>
+                                <label class="cfg4-radio"><input type="radio" name="sem_interacao" value="padrao" checked> <span>Encerrar após <strong>24 horas</strong> (padrão)</span></label>
+                                <label class="cfg4-radio"><input type="radio" name="sem_interacao" value="alterar"> <span>Alterar tempo</span></label>
+                                <label class="cfg4-radio"><input type="radio" name="sem_interacao" value="nao_encerrar"> <span>Nunca encerrar</span></label>
+                            </fieldset>
+                            <div class="cfg4-conditional hidden" id="semInteracaoCustom">
+                                <label class="cfg4-label">Quantos minutos até encerrar?</label>
+                                <div class="cfg4-number-wrap">
+                                    <input id="semInteracaoInput" type="number" class="cfg4-number" min="1" value="1440">
+                                    <span class="cfg4-suffix">min <span style="opacity:.6;">(1440 = 24h)</span></span>
+                                </div>
+                            </div>
+                            <div id="semInteracaoMsgWrap" class="cfg4-msg-inline">
+                                <div class="msg-slot" data-slot="msgSemInteracao"></div>
+                            </div>
+
+                            <button type="button" class="cfg4-advance" onclick="cfg4Next(2)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+
+                        <!-- SUB 3: Erros de menu -->
+                        <div class="cfg4-panel" id="cfg4-sub3">
+                            <h3 class="cfg4-panel-title"><i class="fa-solid fa-triangle-exclamation"></i> Cliente erra as opções do menu</h3>
+                            <p class="cfg4-panel-desc">Após algumas tentativas inválidas, o cliente é encaminhado para um atendente humano.</p>
+
+                            <fieldset class="cfg4-fieldset">
+                                <legend>🔢 Limite de tentativas</legend>
+                                <label class="cfg4-radio"><input type="radio" name="tentativas_mode" value="padrao" checked> <span>Manter <strong>5 tentativas</strong> (padrão)</span></label>
+                                <label class="cfg4-radio"><input type="radio" name="tentativas_mode" value="alterar"> <span>Alterar quantidade</span></label>
+                            </fieldset>
+                            <div class="cfg4-conditional hidden" id="tentativasCustom">
+                                <label class="cfg4-label">Após quantas tentativas?</label>
+                                <div class="cfg4-number-wrap">
+                                    <input id="tentativasInput" type="number" class="cfg4-number" min="1" value="5">
+                                    <span class="cfg4-suffix">tentativas</span>
+                                </div>
+                            </div>
+                            <div class="cfg4-conditional">
+                                <label class="cfg4-label">Para qual fila enviar o cliente?</label>
+                                <select id="tentativasFila" class="cfg4-select select-fila-unica"><option value="">Selecione a fila</option></select>
+                            </div>
+                            <div id="tentativasMsgWrap" class="cfg4-msg-inline">
+                                <div class="msg-slot" data-slot="msgTentativas"></div>
+                            </div>
+
+                            <button type="button" class="cfg4-advance" onclick="cfg4Next(3)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+
+                        <!-- SUB 4: Mensagens automáticas -->
+                        <div class="cfg4-panel" id="cfg4-sub4">
+                            <h3 class="cfg4-panel-title"><i class="fa-solid fa-comment-dots"></i> Mensagens automáticas</h3>
+                            <p class="cfg4-panel-desc">Clique em uma mensagem para personalizar. A prévia atualiza na hora.</p>
+                            <div id="mensagensPadraoContainer"></div>
+                            <button type="button" class="cfg4-advance" onclick="cfg4Next(4)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+
+                        <!-- SUB 5: Respostas rápidas -->
+                        <div class="cfg4-panel" id="cfg4-sub5">
+                            <h3 class="cfg4-panel-title"><i class="fa-solid fa-bolt"></i> Respostas rápidas <span class="cfg4-optional">opcional</span></h3>
+                            <p class="cfg4-panel-desc">Atalhos que os agentes disparam com um clique — endereço, agradecimento, confirmação…</p>
+                            <div class="sugestao-chips" id="sugestaoChips"></div>
+                            <table class="dynamic-table hidden" id="respostasTable">
+                                <thead><tr><th>Título do atalho</th><th>Mensagem enviada</th><th>Ações</th></tr></thead>
+                                <tbody id="respostasTableBody"></tbody>
+                            </table>
+                            <button type="button" class="btn-add" id="addRespostaBtn">+ Criar resposta rápida</button>
+                            <button type="button" class="cfg4-advance" onclick="cfg4Next(5)" style="margin-top:16px;">Concluir Configurações <i class="fa-solid fa-check"></i></button>
+                        </div>
+
+                    </div><!-- /cfg4-form -->
+
+                    <!-- Coluna 3: Prévia WhatsApp — sempre visível, atualização em tempo real -->
+                    <div class="cfg4-preview" id="cfg4Preview">
+                        <!-- Header estilo WhatsApp -->
+                        <div class="cfg4-preview-header">
+                            <i class="fa-brands fa-whatsapp"></i>
+                            <div style="flex:1;">
+                                <div style="font-weight:700;font-size:13px;">Nome da Empresa</div>
+                                <div style="font-size:10px;opacity:0.7;font-weight:400;">online</div>
+                            </div>
+                        </div>
+                        <!-- Contexto do sub-passo atual -->
+                        <div class="cfg4-preview-context" id="cfg4PreviewContext">
+                            Selecione um sub-passo para ver a prévia
+                        </div>
+                        <!-- Área do chat -->
+                        <div class="cfg4-wa-screen" id="cfg4WaScreen">
+                            <div class="cfg4-wa-empty" id="cfg4WaEmpty">
+                                <i class="fa-regular fa-comment-dots"></i>
+                                <span>Interaja com os campos ao lado — a mensagem aparece aqui em tempo real</span>
+                            </div>
+                            <div class="cfg4-wa-bubble hidden" id="cfg4WaBubble">
+                                <div class="wa-bubble-text" id="cfg4WaText"></div>
+                                <div class="wa-meta">
+                                    <span id="cfg4WaTime">09:41</span>
+                                    <span class="wa-check"><i class="fa-solid fa-check-double"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Barra de digitação fake -->
+                        <div class="cfg4-wa-typing-bar">
+                            <div class="cfg4-typing-dot-wrap">
+                                <span>Digite uma mensagem</span>
+                            </div>
+                            <div class="cfg4-send-btn">
+                                <i class="fa-solid fa-microphone"></i>
+                            </div>
+                        </div>
+                        <!-- Tip / dica contextual -->
+                        <div class="cfg4-preview-tip" id="cfg4PreviewTip"></div>
                     </div>
 
-                    <div class="config-item">
-                        <div class="config-item-info">
-                            <strong>Cliente abandona a conversa</strong>
-                            <p>Se o cliente some no meio do atendimento e não responde mais, o sistema pode encerrar sozinho depois de um tempo.</p>
-                        </div>
-                        <fieldset class="radio-fieldset">
-                            <legend>O que prefere?</legend>
-                            <div class="radio-group">
-                                <label><input type="radio" name="sem_interacao" value="padrao" checked> Encerrar após 24 horas (padrão)</label>
-                                <label><input type="radio" name="sem_interacao" value="alterar"> Alterar tempo</label>
-                                <label><input type="radio" name="sem_interacao" value="nao_encerrar"> Nunca encerrar</label>
-                            </div>
-                        </fieldset>
-                        <div class="config-conditional hidden" id="semInteracaoCustom">
-                            <label for="semInteracaoInput">Quantos minutos até encerrar?</label>
-                            <input id="semInteracaoInput" type="number" class="form-control input-minutos" min="1" value="1440">
-                            <span class="config-hint">1440 minutos = 24 horas</span>
-                        </div>
-                        <div id="semInteracaoMsgWrap">
-                            <div class="msg-slot" data-slot="msgSemInteracao"></div>
-                        </div>
-                    </div>
-
-                    <div class="config-item">
-                        <div class="config-item-info">
-                            <strong>Cliente erra as opções do menu várias vezes</strong>
-                            <p>Depois de algumas tentativas inválidas, o cliente é enviado para uma fila e atendido por uma pessoa.</p>
-                        </div>
-                        <fieldset class="radio-fieldset">
-                            <legend>Limite de tentativas</legend>
-                            <div class="radio-group">
-                                <label><input type="radio" name="tentativas_mode" value="padrao" checked> Manter 5 tentativas</label>
-                                <label><input type="radio" name="tentativas_mode" value="alterar"> Alterar quantidade</label>
-                            </div>
-                        </fieldset>
-                        <div class="config-conditional hidden" id="tentativasCustom">
-                            <label for="tentativasInput">Após quantas tentativas?</label>
-                            <input id="tentativasInput" type="number" class="form-control input-minutos" min="1" value="5">
-                        </div>
-                        <div class="config-conditional">
-                            <label for="tentativasFila">Para qual fila enviar o cliente?</label>
-                            <select id="tentativasFila" class="form-control select-fila-unica"><option value="">Selecione a fila</option></select>
-                        </div>
-                        <div class="msg-slot" data-slot="msgTentativas"></div>
-                    </div>
-                    </div>
-                </section>
-
-                <!-- ============ Grupo B: Mensagens automáticas ============ -->
-                <section class="config-group is-open">
-                    <button type="button" class="config-group-title" aria-expanded="true">
-                        💬 Mensagens automáticas
-                        <span class="cgt-arrow">▾</span>
-                    </button>
-                    <div class="config-group-body">
-                        <p class="config-group-desc">É assim que seu cliente verá cada mensagem no WhatsApp. Clique em "Personalizar" para escrever do seu jeito — a prévia atualiza na hora.</p>
-                    <div id="mensagensPadraoContainer"></div>
-                    </div>
-                </section>
-
-                <!-- ============ Grupo C: Respostas rápidas ============ -->
-                <section class="config-group is-open">
-                    <button type="button" class="config-group-title" aria-expanded="true">
-                        ⚡ Respostas rápidas <span class="config-opcional">(opcional)</span>
-                        <span class="cgt-arrow">▾</span>
-                    </button>
-                    <div class="config-group-body">
-                        <p class="config-group-desc">Atalhos que os agentes disparam com um clique durante o atendimento — endereço da empresa, agradecimento, confirmação de agenda… Toque numa sugestão ou crie a sua.</p>
-                    <div class="sugestao-chips" id="sugestaoChips"></div>
-                    <table class="dynamic-table hidden" id="respostasTable">
-                        <thead><tr><th>Título do atalho</th><th>Mensagem enviada</th><th>Ações</th></tr></thead>
-                        <tbody id="respostasTableBody"></tbody>
-                    </table>
-                    <button type="button" class="btn-add" id="addRespostaBtn">+ Criar resposta rápida</button>
-                    </div>
-                </section>
+                </div><!-- /cfg4-shell -->
             </div>
 
-            <!-- STEP 5: NÚMEROS -->
             <div class="form-card step-content hidden" id="step5">
                 <div class="step-header">
                     <div class="step-header-text">

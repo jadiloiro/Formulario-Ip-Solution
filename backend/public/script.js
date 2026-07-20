@@ -1346,6 +1346,173 @@ function restoreDraft() {
 }
 
 /* ========================= Inicialização ========================= */
+/* ========================= Passo 4 — Sub-passos e Prévia em Tempo Real ========================= */
+
+let cfg4CurrentSub = 1;
+let cfg4PreviewId = null;
+
+const CFG4_TIPS = {
+    1: 'Sub 1 — tempos do menu: nenhuma mensagem para prévia.',
+    2: 'Sub 2 — a mensagem de encerramento por abandono é exibida ao cliente.',
+    3: 'Sub 3 — a mensagem de tentativas excedidas é exibida ao cliente.',
+    4: 'Sub 4 — clique em qualquer mensagem abaixo para ver e editar em tempo real.',
+    5: 'Sub 5 — atalhos dos agentes (não são exibidos ao cliente).',
+};
+
+const CFG4_CONTEXT = {
+    1: '⏱ Configuração de tempo — sem mensagem ao cliente',
+    2: '💬 Mensagem enviada quando o cliente para de responder',
+    3: '⚠️ Mensagem enviada ao exceder o limite de tentativas',
+    4: '💬 Clique em uma mensagem abaixo para ver a prévia',
+    5: '⚡ Atalhos internos dos agentes — não exibidos ao cliente',
+};
+
+function cfg4UpdateClock() {
+    const el = document.getElementById('cfg4WaTime');
+    if (!el) return;
+    const now = new Date();
+    el.textContent = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+}
+
+function cfg4GoSub(sub) {
+    if (sub < 1 || sub > 5) return;
+    cfg4CurrentSub = sub;
+
+    document.querySelectorAll('.cfg4-nav-item').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.getAttribute('data-sub')) === sub);
+    });
+    document.querySelectorAll('.cfg4-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById(`cfg4-sub${sub}`);
+    if (panel) panel.classList.add('active');
+
+    const ctx = document.getElementById('cfg4PreviewContext');
+    if (ctx) ctx.textContent = CFG4_CONTEXT[sub] || '';
+    const tip = document.getElementById('cfg4PreviewTip');
+    if (tip) tip.textContent = CFG4_TIPS[sub] || '';
+
+    if (sub === 2) cfg4ShowPreview('msgSemInteracao');
+    else if (sub === 3) cfg4ShowPreview('msgTentativas');
+    else if (sub !== 4) cfg4ClearPreview();
+    else if (!cfg4PreviewId) cfg4ClearPreview();
+}
+
+function cfg4Next(sub) {
+    const navItem = document.querySelector(`.cfg4-nav-item[data-sub="${sub}"]`);
+    if (navItem) {
+        navItem.classList.add('done');
+        const icon = navItem.querySelector('.cfg4-done');
+        if (icon) icon.classList.remove('hidden');
+    }
+    if (sub < 5) cfg4GoSub(sub + 1);
+}
+
+function cfg4ShowPreview(id, textoOverride) {
+    cfg4PreviewId = id;
+    const bubble = document.getElementById('cfg4WaBubble');
+    const empty  = document.getElementById('cfg4WaEmpty');
+    const textEl = document.getElementById('cfg4WaText');
+    if (!bubble || !empty || !textEl) return;
+
+    let texto = textoOverride;
+    if (texto === undefined) {
+        const cfg = MENSAGENS_PADRAO.find(m => m.id === id);
+        if (!cfg) { cfg4ClearPreview(); return; }
+        const modeEl = document.querySelector(`input[name="mode_${id}"]:checked`);
+        const isCustom = modeEl && modeEl.value === 'custom';
+        const ta = document.getElementById(id);
+        texto = isCustom && ta ? ta.value : cfg.texto;
+    }
+
+    textEl.innerHTML = formatWhatsPreview(texto);
+    cfg4UpdateClock();
+    bubble.classList.remove('hidden');
+    empty.classList.add('hidden');
+
+    const screen = document.getElementById('cfg4WaScreen');
+    if (screen) setTimeout(() => { screen.scrollTop = screen.scrollHeight; }, 50);
+}
+
+function cfg4ClearPreview() {
+    cfg4PreviewId = null;
+    const bubble = document.getElementById('cfg4WaBubble');
+    const empty  = document.getElementById('cfg4WaEmpty');
+    if (bubble) bubble.classList.add('hidden');
+    if (empty)  empty.classList.remove('hidden');
+}
+
+function cfg4InitInteractions() {
+    document.querySelectorAll('.cfg4-nav-item').forEach(btn => {
+        btn.addEventListener('click', () => cfg4GoSub(parseInt(btn.getAttribute('data-sub'))));
+    });
+
+    document.querySelectorAll('input[name="tempo_bot"]').forEach(r => {
+        r.addEventListener('change', () => {
+            const w = document.getElementById('tempoBotCustom');
+            if (w) w.classList.toggle('hidden', r.value !== 'alterar');
+        });
+    });
+    document.querySelectorAll('input[name="tempo_bot_acao"]').forEach(r => {
+        r.addEventListener('change', () => {
+            const w = document.getElementById('tempoBotFilaWrap');
+            if (w) w.classList.toggle('hidden', r.value !== 'direcionar');
+            if (typeof checkConfigCascade === 'function') checkConfigCascade();
+        });
+    });
+    document.querySelectorAll('input[name="sem_interacao"]').forEach(r => {
+        r.addEventListener('change', () => {
+            const w = document.getElementById('semInteracaoCustom');
+            if (w) w.classList.toggle('hidden', r.value !== 'alterar');
+        });
+    });
+    document.querySelectorAll('input[name="tentativas_mode"]').forEach(r => {
+        r.addEventListener('change', () => {
+            const w = document.getElementById('tentativasCustom');
+            if (w) w.classList.toggle('hidden', r.value !== 'alterar');
+        });
+    });
+
+    const form = document.getElementById('cfg4Form');
+    if (form) {
+        form.addEventListener('click', (e) => {
+            const item = e.target.closest('#cfg4-sub4 .msg-item');
+            if (!item) return;
+            const id = item.getAttribute('data-msg-id');
+            if (!id) return;
+            document.querySelectorAll('#cfg4-sub4 .msg-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            cfg4ShowPreview(id);
+        });
+        form.addEventListener('input', (e) => {
+            if (!e.target.classList.contains('msg-custom')) return;
+            const item = e.target.closest('.msg-item');
+            if (!item) return;
+            const id = item.getAttribute('data-msg-id');
+            if (id) cfg4ShowPreview(id, e.target.value);
+        });
+        form.addEventListener('change', (e) => {
+            const t = e.target;
+            if (t.name && t.name.startsWith('mode_')) {
+                const id = t.name.replace('mode_', '');
+                const item = document.querySelector(`.msg-item[data-msg-id="${id}"]`);
+                if (!item) return;
+                const ta = item.querySelector('.msg-custom');
+                if (ta) ta.classList.toggle('hidden', t.value !== 'custom');
+                cfg4ShowPreview(id);
+            }
+        });
+    }
+
+    document.querySelectorAll('input[name="sem_interacao"], input[name="tentativas_mode"]').forEach(r => {
+        r.addEventListener('change', () => {
+            if (cfg4CurrentSub === 2) cfg4ShowPreview('msgSemInteracao');
+            if (cfg4CurrentSub === 3) cfg4ShowPreview('msgTentativas');
+        });
+    });
+
+    cfg4UpdateClock();
+    cfg4GoSub(1);
+}
+
 /* ========================= Passo 4: Accordion ========================= */
 function setupConfigAccordion() {
     document.querySelectorAll('.config-group-title').forEach(btn => {
@@ -1372,6 +1539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSugestaoChips();
     setupStep4Interactions();
     setupConfigAccordion();
+    cfg4InitInteractions(); // sub-passos + prévia em tempo real
     document.getElementById('addRespostaBtn').addEventListener('click', () => addRespostaRow());
     document.getElementById('respostasTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-delete');
@@ -1579,13 +1747,13 @@ document.addEventListener('DOMContentLoaded', () => {
         transferir: 'Transferir para fila', encerrar: 'Encerrar atendimento'
     };
     const PALETTE = [
-        { type: 'menu',      icon: '☷',  label: 'Menu' },
-        { type: 'mensagem',  icon: '💬', label: 'Mensagem' },
-        { type: 'entrada',   icon: '⇥',  label: 'Entrada' },
-        { type: 'condicao',  icon: '⑂',  label: 'Condição' },
-        { type: 'aguardar',  icon: '🕐', label: 'Aguardar' },
-        { type: 'transferir',icon: '📥', label: 'Transferir' },
-        { type: 'encerrar',  icon: '⏻',  label: 'Encerrar' }
+        { type: 'menu',       icon: 'fa-solid fa-list',            label: 'Menu',       color: '#d97706' },
+        { type: 'mensagem',   icon: 'fa-solid fa-comment-dots',    label: 'Mensagem',   color: '#0891b2' },
+        { type: 'entrada',    icon: 'fa-solid fa-keyboard',        label: 'Entrada',    color: '#059669' },
+        { type: 'condicao',   icon: 'fa-solid fa-code-branch',     label: 'Condição',   color: '#7c3aed' },
+        { type: 'aguardar',   icon: 'fa-solid fa-hourglass-half',  label: 'Aguardar',   color: '#6d28d9' },
+        { type: 'transferir', icon: 'fa-solid fa-people-arrows',   label: 'Transferir', color: '#047857' },
+        { type: 'encerrar',   icon: 'fa-solid fa-circle-xmark',   label: 'Encerrar',   color: '#dc2626' },
     ];
 
     let editor = null;
@@ -1607,51 +1775,116 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    /* ---------- HTML dos nós ---------- */
-    function headerHtml(icon, title) {
-        return `<div class="node-header"><span class="node-hicon">${icon}</span><span class="node-htitle">${escapeHtml(title)}</span></div>`;
-    }
-    function menuRowHtml(i, v) {
-        return `<div class="menu-row"><span class="menu-num">${i + 1}</span><input type="text" class="menu-opt-input" data-idx="${i}" placeholder="Ex: Comercial" value="${escapeHtml(v || '')}"></div>`;
-    }
-    function htmlMenu(options) {
-        const rows = (options || ['']).map((op, i) => menuRowHtml(i, op)).join('');
-        return `${headerHtml('☷', 'Menu')}<div class="node-body">
-            <label class="node-field-label">Mensagem enviada ao cliente</label>
-            <textarea df-texto placeholder="Ex: Digite o número da opção desejada:"></textarea>
-            <label class="node-field-label" style="margin-top:10px;">Opções — cada uma vira uma saída →</label>
-            <div class="menu-rows">${rows}</div>
-            <div class="menu-actions"><button type="button" class="menu-add">+ opção</button><button type="button" class="menu-del">− última</button></div>
+    /* ---------- HTML dos nós — design moderno com cabeçalho colorido ---------- */
+    const NODE_META = {
+        inicio:     { icon: 'fa-solid fa-play',           label: 'Início',             color: '#2563eb', bg: '#eff6ff' },
+        mensagem:   { icon: 'fa-solid fa-comment-dots',   label: 'Mensagem',           color: '#0891b2', bg: '#ecfeff' },
+        entrada:    { icon: 'fa-solid fa-keyboard',       label: 'Entrada do cliente', color: '#059669', bg: '#ecfdf5' },
+        menu:       { icon: 'fa-solid fa-list',           label: 'Menu de opções',     color: '#d97706', bg: '#fffbeb' },
+        condicao:   { icon: 'fa-solid fa-code-branch',    label: 'Condição',           color: '#7c3aed', bg: '#f5f3ff' },
+        aguardar:   { icon: 'fa-solid fa-hourglass-half', label: 'Aguardar',           color: '#6d28d9', bg: '#f5f3ff' },
+        transferir: { icon: 'fa-solid fa-people-arrows',  label: 'Transferir para fila', color: '#047857', bg: '#ecfdf5' },
+        encerrar:   { icon: 'fa-solid fa-circle-xmark',  label: 'Encerrar',           color: '#dc2626', bg: '#fef2f2' },
+    };
+
+    function headerHtml(type, extraBadge) {
+        const m = NODE_META[type] || { icon: 'fa-solid fa-circle', label: type, color: '#64748b', bg: '#f8fafc' };
+        return `<div class="node-header" style="background:${m.bg};border-bottom:2px solid ${m.color}20;">
+            <span class="node-hbadge" style="background:${m.color};"><i class="${m.icon}"></i></span>
+            <span class="node-htitle" style="color:${m.color};">${m.label}</span>
+            ${extraBadge || ''}
         </div>`;
     }
+
+    function menuRowHtml(i, v) {
+        return `<div class="menu-row">
+            <span class="menu-num" style="background:${NODE_META.menu.color};">${i + 1}</span>
+            <input type="text" class="menu-opt-input" data-idx="${i}" placeholder="Ex: Comercial" value="${escapeHtml(v || '')}">
+            <i class="fa-solid fa-arrow-right menu-row-arrow"></i>
+        </div>`;
+    }
+
+    function htmlMenu(options) {
+        const rows = (options || ['']).map((op, i) => menuRowHtml(i, op)).join('');
+        return `${headerHtml('menu')}
+        <div class="node-body">
+            <label class="node-field-label"><i class="fa-regular fa-comment"></i> Mensagem ao cliente</label>
+            <textarea df-texto placeholder="Olá! Digite o número da opção desejada:" class="node-textarea"></textarea>
+            <label class="node-field-label" style="margin-top:10px;"><i class="fa-solid fa-list-ol"></i> Opções → cada uma tem uma saída</label>
+            <div class="menu-rows">${rows}</div>
+            <div class="menu-actions">
+                <button type="button" class="menu-add"><i class="fa-solid fa-plus"></i> opção</button>
+                <button type="button" class="menu-del"><i class="fa-solid fa-minus"></i> última</button>
+            </div>
+        </div>`;
+    }
+
     function agentesHtml(fila) {
         const d = dadosVivos();
         const ag = (d.agentesPorFila && d.agentesPorFila[fila]) || [];
-        if (!fila) return '<span class="node-muted">Escolha a fila de destino</span>';
+        if (!fila) return `<div class="node-hint"><i class="fa-solid fa-triangle-exclamation"></i> Escolha uma fila acima</div>`;
         return ag.length
-            ? `<div class="node-agents">${ag.map(a => `<span class="node-agent-chip">${escapeHtml(a)}</span>`).join('')}</div>`
-            : '<span class="node-muted">Sem agente vinculado no Passo 2</span>';
+            ? `<div class="node-agents">${ag.map(a => `<span class="node-agent-chip"><i class="fa-solid fa-user"></i>${escapeHtml(a)}</span>`).join('')}</div>`
+            : `<div class="node-hint node-hint-warn"><i class="fa-solid fa-user-slash"></i> Nenhum agente vinculado</div>`;
     }
+
     function filaOptionsHtml(sel) {
         return '<option value="">Selecione a fila…</option>' + filasDoForm()
             .map(f => `<option value="${escapeHtml(f)}" ${f === sel ? 'selected' : ''}>${escapeHtml(f)}</option>`).join('');
     }
+
     function htmlPorTipo(type, preset) {
         const d = dadosVivos();
         switch (type) {
-            case 'inicio': return `${headerHtml('⏻', 'Início')}<div class="node-body"><p>Dispara quando o cliente envia a <strong>primeira mensagem</strong>.</p></div>`;
-            case 'mensagem': return `${headerHtml('💬', 'Mensagem')}<div class="node-body"><textarea df-texto placeholder="Texto enviado ao cliente"></textarea></div>`;
-            case 'entrada': return `${headerHtml('⇥', 'Entrada')}<div class="node-body"><textarea df-pergunta placeholder="Ex: Qual o seu nome completo?"></textarea></div>`;
+            case 'inicio':
+                return `${headerHtml('inicio', '<span class="node-badge-pill">Gatilho</span>')}
+                <div class="node-body node-body-center">
+                    <i class="fa-brands fa-whatsapp node-big-icon"></i>
+                    <p class="node-desc">Cliente envia a <strong>primeira mensagem</strong> no WhatsApp</p>
+                </div>`;
+            case 'mensagem':
+                return `${headerHtml('mensagem')}
+                <div class="node-body">
+                    <label class="node-field-label"><i class="fa-regular fa-pen-to-square"></i> Texto da mensagem</label>
+                    <textarea df-texto placeholder="Olá! Como posso ajudar?" class="node-textarea"></textarea>
+                </div>`;
+            case 'entrada':
+                return `${headerHtml('entrada')}
+                <div class="node-body">
+                    <label class="node-field-label"><i class="fa-solid fa-question"></i> Pergunta ao cliente</label>
+                    <textarea df-pergunta placeholder="Ex: Qual o seu nome completo?" class="node-textarea"></textarea>
+                    <div class="node-hint"><i class="fa-solid fa-reply"></i> Aguarda a resposta antes de continuar</div>
+                </div>`;
             case 'menu': return htmlMenu(preset && preset.options);
-            case 'condicao': return `${headerHtml('⑂', 'Condição de horário')}<div class="node-body">
-                <p class="cond-resumo">Expediente (Passo 3): <strong class="h-exp">${escapeHtml(d.horarioTexto || 'não definido')}</strong></p>
-                <div class="cond-row"><span class="cond-ok">✓</span> Dentro do horário</div>
-                <div class="cond-row"><span class="cond-no">✕</span> Fora do horário</div></div>`;
-            case 'aguardar': return `${headerHtml('🕐', 'Aguardar')}<div class="node-body"><div class="field-suffix"><input type="number" min="1" df-minutos> <span>minutos</span></div></div>`;
-            case 'transferir': return `${headerHtml('📥', 'Transferir para fila')}<div class="node-body">
-                <select class="transferir-fila">${filaOptionsHtml(preset && preset.fila)}</select>
-                <div class="node-agents-wrap">${agentesHtml(preset && preset.fila)}</div></div>`;
-            case 'encerrar': return `${headerHtml('⏻', 'Encerrar atendimento')}<div class="node-body"><p>Envia a <strong>mensagem de fim de sessão</strong> (Passo 4) e encerra.</p></div>`;
+            case 'condicao':
+                return `${headerHtml('condicao')}
+                <div class="node-body">
+                    <div class="node-hint node-hint-info"><i class="fa-solid fa-clock"></i> ${escapeHtml(d.horarioTexto || 'Horário não definido (Passo 3)')}</div>
+                    <div class="cond-row cond-ok"><i class="fa-solid fa-check-circle"></i> Dentro do horário</div>
+                    <div class="cond-row cond-no"><i class="fa-solid fa-times-circle"></i> Fora do horário</div>
+                </div>`;
+            case 'aguardar':
+                return `${headerHtml('aguardar')}
+                <div class="node-body">
+                    <label class="node-field-label"><i class="fa-regular fa-clock"></i> Tempo de espera</label>
+                    <div class="field-suffix">
+                        <input type="number" min="1" df-minutos class="node-input-num" placeholder="5">
+                        <span class="suffix-label">minutos</span>
+                    </div>
+                </div>`;
+            case 'transferir':
+                return `${headerHtml('transferir')}
+                <div class="node-body">
+                    <label class="node-field-label"><i class="fa-solid fa-layer-group"></i> Fila de destino</label>
+                    <select class="transferir-fila node-select">${filaOptionsHtml(preset && preset.fila)}</select>
+                    <div class="node-agents-wrap">${agentesHtml(preset && preset.fila)}</div>
+                </div>`;
+            case 'encerrar':
+                return `${headerHtml('encerrar')}
+                <div class="node-body node-body-center">
+                    <i class="fa-solid fa-flag-checkered node-big-icon" style="color:#dc2626;"></i>
+                    <p class="node-desc">Envia mensagem de <strong>encerramento</strong> e finaliza o atendimento</p>
+                </div>`;
         }
         return '';
     }
@@ -1771,7 +2004,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'ife-action';
-            btn.innerHTML = `<span class="ife-action-icon">${p.icon}</span><span>${p.label}</span>`;
+        btn.innerHTML = `
+            <span class="ife-action-dot" style="background:${p.color};"></span>
+            <i class="${p.icon} ife-action-icon" style="color:${p.color};"></i>
+            <span class="ife-action-label">${p.label}</span>`;
             btn.title = NODE_LABELS[p.type];
             btn.addEventListener('click', () => {
                 const pos = nextPos();
