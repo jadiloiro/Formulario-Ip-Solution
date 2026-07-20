@@ -13,6 +13,10 @@
     --white: #ffffff;
     --danger: #dc3545;
     --danger-tint: rgba(220,53,69,0.08);
+    /* SVG logo color tokens */
+    --logo-accent: #e85d04;
+    --logo-mark:   #002b5e;
+    --logo-word:   #002b5e;
     --success: #1c8a4b;
     --shadow: 0 4px 12px rgba(0,0,0,0.05);
     --shadow-strong: 0 12px 28px rgba(0,0,0,0.14);
@@ -46,6 +50,10 @@
     --accent-tint-10: rgba(77,143,240,0.18);
     --accent-tint-15: rgba(77,143,240,0.26);
     --scrollbar-thumb: #46536a;
+    /* SVG logo in dark mode */
+    --logo-accent: #ff8a3d;
+    --logo-mark:   #c8d8f4;
+    --logo-word:   #c8d8f4;
 }
 
 /* Bordas visíveis nos cartões/painéis no tema escuro, já que a sombra sozinha some no fundo escuro */
@@ -80,15 +88,18 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 }
 
 /* Logo Interativa */
-.logo-img {
-    max-width: 100%;
-    height: auto;
-    margin-bottom: 30px;
-    object-fit: contain;
+/* Logo SVG button */
+.logo-btn {
+    display: block;
+    background: none;
+    border: none;
     cursor: pointer;
-    transition: transform 0.3s;
+    padding: 0;
+    margin-bottom: 28px;
+    transition: transform 0.25s ease, opacity 0.2s;
 }
-.logo-img:hover { transform: scale(1.05); }
+.logo-btn:hover { transform: scale(1.05); opacity: 0.9; }
+.logo-svg { display: block; width: 140px; height: auto; }
 
 /* Menu Lateral */
 .sidebar-menu { list-style: none; }
@@ -900,7 +911,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     .sidebar { width: 80px; }
     .sidebar-menu span:not(.menu-icon) { display: none; }
     .sidebar-bot, .sidebar-progress { display: none; }
-    .logo-img { display: none; }
+    .logo-btn { display: none; }
     .bottom-nav { left: 80px; }
     .top-wizard { display: none; }
 }
