@@ -213,16 +213,15 @@
                     </div>
                 </div>
 
-                <fieldset class="form-group radio-fieldset">
-                    <legend>Horário Padrão (Seg-Sex 08h às 18h | Sáb 08h às 12h)</legend>
-                    <div class="radio-group">
-                        <label><input type="radio" name="horario_padrao" value="sim" checked> Manter Padrão</label>
-                        <label><input type="radio" name="horario_padrao" value="nao"> Alterar Horário</label>
+                <div class="form-group schedule-group">
+                    <label class="schedule-group-label">Horário de atendimento por dia da semana</label>
+                    <div class="schedule-quick-actions">
+                        <button type="button" class="schedule-chip" id="btnScheduleComercial">☀️ Aplicar horário comercial (Seg-Sex 08h-18h, Sáb 08h-12h)</button>
+                        <button type="button" class="schedule-chip" id="btnScheduleCopySeg">📋 Copiar Segunda para os dias úteis</button>
+                        <button type="button" class="schedule-chip schedule-chip-ghost" id="btnScheduleAllClosed">🌙 Marcar todos como fechados</button>
                     </div>
-                </fieldset>
-                <div class="form-group hidden" id="customHorario">
-                    <label for="customHorarioText">Informe o horário desejado:</label>
-                    <textarea id="customHorarioText" class="form-control" placeholder="Ex: Seg a Sex das 09:00 as 17:00"></textarea>
+                    <div class="schedule-days" id="scheduleDays" role="group" aria-label="Horários por dia da semana"></div>
+                    <p class="field-hint">Toque na chave para abrir ou fechar o dia. Use "+ intervalo" para uma pausa (ex.: almoço).</p>
                 </div>
 
                 <fieldset class="form-group radio-fieldset">

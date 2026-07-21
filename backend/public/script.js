@@ -426,6 +426,9 @@ function resetAllData() {
         });
     }
 
+    // Horários (Passo 3) voltam ao horário comercial padrão
+    if (typeof renderScheduleDays === 'function') renderScheduleDays(defaultScheduleState());
+
     // Editor de fluxo embutido volta ao modelo inicial
     if (typeof ifeReset === 'function') ifeReset();
 
@@ -986,14 +989,186 @@ function getFilaAgentesMap() {
     return map;
 }
 
+/* ========================= Passo 3 · Horários (seletor visual estilo WhatsApp) =========================
+   Em vez de pedir para o cliente escrever o horário em texto livre, cada dia da semana tem uma
+   chave (aberto/fechado) e um ou mais intervalos de horário — igual ao "Horário de Atendimento"
+   do WhatsApp Business. Tudo é montado dinamicamente para caber em uma única linha por dia. */
+const DIAS_SEMANA = [
+    { key: 'seg', label: 'Segunda-feira', curto: 'Segunda' },
+    { key: 'ter', label: 'Terça-feira', curto: 'Terça' },
+    { key: 'qua', label: 'Quarta-feira', curto: 'Quarta' },
+    { key: 'qui', label: 'Quinta-feira', curto: 'Quinta' },
+    { key: 'sex', label: 'Sexta-feira', curto: 'Sexta' },
+    { key: 'sab', label: 'Sábado', curto: 'Sábado' },
+    { key: 'dom', label: 'Domingo', curto: 'Domingo' }
+];
+
+function defaultScheduleState() {
+    const uteis = () => ({ aberto: true, intervalos: [{ de: '08:00', ate: '18:00' }] });
+    return {
+        seg: uteis(), ter: uteis(), qua: uteis(), qui: uteis(), sex: uteis(),
+        sab: { aberto: true, intervalos: [{ de: '08:00', ate: '12:00' }] },
+        dom: { aberto: false, intervalos: [] }
+    };
+}
+
+function scheduleIntervalRowHtml(idx, intervalo) {
+    return `
+        <div class="schedule-interval" data-idx="${idx}">
+            <input type="time" class="schedule-time schedule-de" value="${intervalo.de || '08:00'}" aria-label="Abre às">
+            <span class="schedule-sep">até</span>
+            <input type="time" class="schedule-time schedule-ate" value="${intervalo.ate || '18:00'}" aria-label="Fecha às">
+            <button type="button" class="schedule-interval-remove" title="Remover este intervalo" aria-label="Remover intervalo">✕</button>
+        </div>`;
+}
+
+function scheduleDayRowHtml(dia, estado) {
+    const aberto = !!estado.aberto;
+    const intervalos = (estado.intervalos && estado.intervalos.length) ? estado.intervalos : [{ de: '08:00', ate: '18:00' }];
+    const intervalosHtml = aberto
+        ? intervalos.map((it, i) => scheduleIntervalRowHtml(i, it)).join('')
+            + `<button type="button" class="schedule-add-interval">+ Adicionar intervalo</button>`
+        : '';
+    return `
+        <div class="schedule-day ${aberto ? 'is-open' : ''}" data-day="${dia.key}">
+            <div class="schedule-day-head">
+                <label class="wa-switch">
+                    <input type="checkbox" class="schedule-day-toggle" ${aberto ? 'checked' : ''} aria-label="Atende ${dia.label}">
+                    <span class="wa-switch-track"></span>
+                </label>
+                <span class="schedule-day-label">${dia.label}</span>
+                <span class="schedule-day-status">${aberto ? 'Aberto' : 'Fechado'}</span>
+            </div>
+            <div class="schedule-day-intervals">${intervalosHtml}</div>
+        </div>`;
+}
+
+function renderScheduleDays(estadoSemana) {
+    const container = document.getElementById('scheduleDays');
+    if (!container) return;
+    const semana = estadoSemana || defaultScheduleState();
+    container.innerHTML = DIAS_SEMANA
+        .map(dia => scheduleDayRowHtml(dia, semana[dia.key] || { aberto: false, intervalos: [] }))
+        .join('');
+}
+
+// Lê o estado atual direto do DOM (fonte da verdade fica na tela, não em variável separada)
+function getScheduleState() {
+    const container = document.getElementById('scheduleDays');
+    const estado = {};
+    DIAS_SEMANA.forEach(dia => {
+        const row = container && container.querySelector(`.schedule-day[data-day="${dia.key}"]`);
+        if (!row) { estado[dia.key] = { aberto: false, intervalos: [] }; return; }
+        const aberto = row.querySelector('.schedule-day-toggle').checked;
+        const intervalos = Array.from(row.querySelectorAll('.schedule-interval')).map(int => ({
+            de: int.querySelector('.schedule-de').value || '08:00',
+            ate: int.querySelector('.schedule-ate').value || '18:00'
+        }));
+        estado[dia.key] = { aberto, intervalos: aberto ? intervalos : [] };
+    });
+    return estado;
+}
+
+function setScheduleState(estadoSemana) {
+    renderScheduleDays(estadoSemana);
+}
+
+/* Agrupa dias consecutivos com o mesmo horário num texto curto, ex.:
+   "Segunda a Sexta: 08:00–18:00 · Sábado: 08:00–12:00 · Domingo: fechado" */
+function scheduleResumoTexto(estadoSemanaOpcional) {
+    const semana = estadoSemanaOpcional || getScheduleState();
+    const assinaturaDia = (dia) => {
+        const e = semana[dia.key] || { aberto: false, intervalos: [] };
+        if (!e.aberto) return 'fechado';
+        const lista = e.intervalos && e.intervalos.length ? e.intervalos : [{ de: '—', ate: '—' }];
+        return lista.map(it => `${it.de}–${it.ate}`).join(' e ');
+    };
+    const grupos = [];
+    DIAS_SEMANA.forEach(dia => {
+        const assinatura = assinaturaDia(dia);
+        const anterior = grupos[grupos.length - 1];
+        if (anterior && anterior.assinatura === assinatura) anterior.fim = dia;
+        else grupos.push({ inicio: dia, fim: dia, assinatura });
+    });
+    const partes = grupos.map(g => {
+        const rotulo = g.inicio.key === g.fim.key ? g.inicio.curto : `${g.inicio.curto} a ${g.fim.curto}`;
+        return g.assinatura === 'fechado' ? `${rotulo}: fechado` : `${rotulo}: ${g.assinatura}`;
+    });
+    return partes.join(' · ') || 'Horário não definido';
+}
+
+function setupScheduleInteractions() {
+    const container = document.getElementById('scheduleDays');
+    const btnComercial = document.getElementById('btnScheduleComercial');
+    const btnCopySeg = document.getElementById('btnScheduleCopySeg');
+    const btnAllClosed = document.getElementById('btnScheduleAllClosed');
+    if (!container) return;
+
+    const afterChange = () => { scheduleDraftSave(); renderFlowPreview(); };
+
+    container.addEventListener('change', (e) => {
+        if (!e.target.classList.contains('schedule-day-toggle')) return;
+        const dayKey = e.target.closest('.schedule-day').getAttribute('data-day');
+        const estado = getScheduleState();
+        // Ao ligar um dia que estava fechado, começa com um intervalo comercial de sugestão
+        estado[dayKey] = e.target.checked
+            ? { aberto: true, intervalos: (estado[dayKey].intervalos && estado[dayKey].intervalos.length) ? estado[dayKey].intervalos : [{ de: '08:00', ate: '18:00' }] }
+            : { aberto: false, intervalos: [] };
+        renderScheduleDays(estado);
+        afterChange();
+    });
+
+    container.addEventListener('click', (e) => {
+        const dayRow = e.target.closest('.schedule-day');
+        if (!dayRow) return;
+        const dayKey = dayRow.getAttribute('data-day');
+        if (e.target.classList.contains('schedule-add-interval')) {
+            const estado = getScheduleState();
+            estado[dayKey].intervalos.push({ de: '13:00', ate: '18:00' });
+            renderScheduleDays(estado);
+            afterChange();
+        } else if (e.target.classList.contains('schedule-interval-remove')) {
+            const estado = getScheduleState();
+            if (estado[dayKey].intervalos.length <= 1) {
+                showToast('Cada dia aberto precisa de pelo menos um intervalo. Use a chave para fechar o dia inteiro.', 'error');
+                return;
+            }
+            const idx = parseInt(e.target.closest('.schedule-interval').getAttribute('data-idx'), 10);
+            estado[dayKey].intervalos.splice(idx, 1);
+            renderScheduleDays(estado);
+            afterChange();
+        }
+    });
+
+    // Digitar um horário não precisa remontar a lista inteira — só salva e atualiza a prévia
+    container.addEventListener('input', afterChange);
+
+    if (btnComercial) btnComercial.addEventListener('click', () => {
+        renderScheduleDays(defaultScheduleState());
+        afterChange();
+        showToast('Horário comercial padrão aplicado.', 'success');
+    });
+    if (btnCopySeg) btnCopySeg.addEventListener('click', () => {
+        const estado = getScheduleState();
+        const segunda = estado.seg;
+        ['ter', 'qua', 'qui', 'sex'].forEach(dia => {
+            estado[dia] = { aberto: segunda.aberto, intervalos: segunda.intervalos.map(it => ({ ...it })) };
+        });
+        renderScheduleDays(estado);
+        afterChange();
+        showToast('Horário de Segunda-feira copiado para os dias úteis.', 'success');
+    });
+    if (btnAllClosed) btnAllClosed.addEventListener('click', () => {
+        const estado = {};
+        DIAS_SEMANA.forEach(dia => { estado[dia.key] = { aberto: false, intervalos: [] }; });
+        renderScheduleDays(estado);
+        afterChange();
+        showToast('Todos os dias marcados como fechados.', 'success');
+    });
+}
+
 function getHorarioResumo() {
-    const padraoRadio = document.querySelector('input[name="horario_padrao"]:checked');
-    const isPadrao = !padraoRadio || padraoRadio.value === 'sim';
-    let horarioTexto = 'Seg-Sex das 08h às 18h | Sáb das 08h às 12h (padrão)';
-    if (!isPadrao) {
-        const custom = document.querySelector('#customHorario textarea');
-        horarioTexto = (custom && custom.value.trim()) || 'Horário personalizado (a definir)';
-    }
+    const horarioTexto = scheduleResumoTexto();
 
     const foraRadio = document.querySelector('input[name="msg_fora"]:checked');
     const direciona = foraRadio && foraRadio.value === 'direcionar';
@@ -1126,8 +1301,7 @@ function collectDraft() {
             };
         }),
         horario: {
-            padrao: getRadio('horario_padrao'),
-            custom: (document.getElementById('customHorarioText') || {}).value || '',
+            dias: getScheduleState(),
             msgFora: getRadio('msg_fora'),
             filaFora: (document.getElementById('filaForaSelect') || {}).value || ''
         },
@@ -1342,12 +1516,11 @@ function gerarDocumentoLevantamento(draft) {
         ═══════════════════════════════════════════════ */
         ensureSpace(20);
         sectionTitle('3. Horários de Atendimento');
-        const hor = draft.horarios || {};
-        field('Configuração', hor.modo === 'alterar' ? 'Horário personalizado' : 'Padrão (24h/7 dias)');
-        if (hor.modo === 'alterar' && hor.horarioCustom) {
-            field('Horário definido', hor.horarioCustom);
-        }
-        field('Fila fora do horário', hor.filaForaHorario || 'Não definida');
+        const hor = draft.horario || {};
+        field('Horário de atendimento', hor.dias ? scheduleResumoTexto(hor.dias) : 'Não definido');
+        field('Fora do horário', hor.msgFora === 'direcionar'
+            ? `Direciona para a fila "${hor.filaFora || '(não selecionada)'}"`
+            : 'Encerra o atendimento com mensagem automática');
 
         /* ═══════════════════════════════════════════════
            PASSO 4 – CONFIGURAÇÕES GERAIS
@@ -1563,14 +1736,11 @@ function restoreDraft() {
         updateFilasDropdowns();
     }
 
-    // Passo 3 — Horários (radios + campos condicionais)
+    // Passo 3 — Horários (chaves por dia + destino fora do expediente)
     if (draft.horario) {
-        setRadio('horario_padrao', draft.horario.padrao);
+        setScheduleState(draft.horario.dias || defaultScheduleState());
         setRadio('msg_fora', draft.horario.msgFora);
-        toggleField('customHorario', draft.horario.padrao === 'nao');
         toggleField('filaForaHorario', draft.horario.msgFora === 'direcionar');
-        const custom = document.getElementById('customHorarioText');
-        if (custom) custom.value = draft.horario.custom || '';
         const filaFora = document.getElementById('filaForaSelect');
         if (filaFora) filaFora.value = draft.horario.filaFora || '';
     }
@@ -1851,6 +2021,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Seletor visual de horários do Passo 3 também precisa existir antes de restaurar o rascunho
+    renderScheduleDays(defaultScheduleState());
+    setupScheduleInteractions();
+
     // Restaura rascunho ANTES de exibir a etapa (para o progresso e os campos já virem certos)
     const restored = restoreDraft();
 
@@ -1862,10 +2036,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showStep(currentStep);
     if (restored) showToast('Rascunho anterior restaurado. Continue de onde parou!', 'success');
 
-    // Campos condicionais do Passo 3 (antes eram onchange inline no HTML)
-    document.querySelectorAll('input[name="horario_padrao"]').forEach(radio => {
-        radio.addEventListener('change', () => toggleField('customHorario', radio.value === 'nao' && radio.checked));
-    });
+    // Campo condicional do Passo 3: qual fila recebe contatos fora do horário
     document.querySelectorAll('input[name="msg_fora"]').forEach(radio => {
         radio.addEventListener('change', () => toggleField('filaForaHorario', radio.value === 'direcionar' && radio.checked));
     });
@@ -1910,6 +2081,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') jadiboTogglePanel(true);
+    });
 
     // ── Sidebar auto-colapso ──────────────────────────────────────────────────
     const sidebar   = document.getElementById('sidebar') || document.querySelector('.sidebar');
@@ -1942,7 +2114,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     syncBottomNav();
-    });
 
     document.getElementById('filasTableBody').addEventListener('input', function (e) {
         if (e.target.classList.contains('fila-nome')) {
@@ -1966,12 +2137,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const botMensagemInicial = document.getElementById('botMensagemInicial');
     if (botMensagemInicial) botMensagemInicial.addEventListener('input', () => renderFlowPreview());
 
-    // Campos de Horários (Passo 3) também alimentam o resumo "Fora do horário" do fluxo
-    document.querySelectorAll('input[name="horario_padrao"], input[name="msg_fora"]').forEach(radio => {
+    // "Fora do horário" (Passo 3) também alimenta o resumo do fluxo do BOT
+    // (o próprio seletor de horários já atualiza a prévia a cada alteração — ver setupScheduleInteractions)
+    document.querySelectorAll('input[name="msg_fora"]').forEach(radio => {
         radio.addEventListener('change', () => renderFlowPreview());
     });
-    const customHorarioTextarea = document.querySelector('#customHorario textarea');
-    if (customHorarioTextarea) customHorarioTextarea.addEventListener('input', () => renderFlowPreview());
     const filaUnicaSelect = document.getElementById('filaForaSelect');
     if (filaUnicaSelect) filaUnicaSelect.addEventListener('change', () => renderFlowPreview());
 

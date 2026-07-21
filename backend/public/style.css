@@ -25,6 +25,10 @@
     --accent-tint-15: rgba(0,43,94,0.15);
     --scrollbar-thumb: #cbd5e1;
     --radius: 8px;
+    /* Tons "estilo WhatsApp" usados no seletor de horários e nas prévias de mensagem */
+    --wa-green: #25d366;
+    --wa-green-dark: #128c4a;
+    --wa-green-tint: rgba(37,211,102,0.10);
 }
 
 /* ================= Tema Escuro ================= */
@@ -54,6 +58,9 @@
     --logo-accent: #ff8a3d;
     --logo-mark:   #c8d8f4;
     --logo-word:   #c8d8f4;
+    --wa-green: #2fe075;
+    --wa-green-dark: #6fe6a0;
+    --wa-green-tint: rgba(47,224,117,0.14);
 }
 
 /* Bordas visíveis nos cartões/painéis no tema escuro, já que a sombra sozinha some no fundo escuro */
@@ -775,6 +782,91 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 /* Fieldsets semânticos com aparência de form-group */
 .radio-fieldset { border: 0; padding: 0; margin: 0 0 20px; }
 .radio-fieldset legend { font-weight: 500; margin-bottom: 8px; font-size: 14px; padding: 0; }
+
+/* ================= Passo 3 · Seletor visual de horários (estilo WhatsApp) ================= */
+.schedule-group-label { display: block; font-weight: 500; margin-bottom: 10px; font-size: 14px; }
+.field-hint { font-size: 12px; color: var(--text-muted); margin: 10px 2px 0; }
+
+.schedule-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.schedule-chip {
+    border: 1px dashed var(--border-color-strong);
+    background: var(--bg-light);
+    color: var(--text-dark);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.18s;
+    white-space: nowrap;
+}
+.schedule-chip:hover { border-color: var(--wa-green); color: var(--wa-green-dark); background: var(--surface); }
+.schedule-chip-ghost { border-style: solid; }
+
+.schedule-days {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+}
+.schedule-day { border-bottom: 1px solid var(--border-color); padding: 12px 14px; transition: background-color 0.15s; }
+.schedule-day:last-child { border-bottom: 0; }
+.schedule-day.is-open { background: var(--wa-green-tint); }
+
+.schedule-day-head { display: flex; align-items: center; gap: 12px; }
+.schedule-day-label { font-weight: 600; font-size: 13.5px; flex: 1; }
+.schedule-day-status { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.schedule-day.is-open .schedule-day-status { color: var(--wa-green-dark); }
+
+/* Chave estilo iOS/WhatsApp: verde quando ligado */
+.wa-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.wa-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.wa-switch-track {
+    position: absolute; inset: 0; background: var(--border-color-strong);
+    border-radius: 999px; transition: background-color 0.2s;
+}
+.wa-switch-track::before {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+    background: var(--white); border-radius: 50%; transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.wa-switch input:checked + .wa-switch-track { background: var(--wa-green); }
+.wa-switch input:checked + .wa-switch-track::before { transform: translateX(18px); }
+.wa-switch input:focus-visible + .wa-switch-track { outline: 2px solid var(--action-orange); outline-offset: 2px; }
+
+.schedule-day-intervals { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-left: 52px; }
+.schedule-interval { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.schedule-time {
+    border: 1px solid var(--border-color-strong);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text-dark);
+    width: 100px;
+}
+.schedule-time:focus { outline: none; border-color: var(--wa-green); box-shadow: 0 0 0 3px var(--wa-green-tint); }
+.schedule-sep { font-size: 12.5px; color: var(--text-muted); }
+.schedule-interval-remove {
+    border: none; background: none; color: var(--text-muted); cursor: pointer;
+    font-size: 14px; width: 24px; height: 24px; border-radius: 50%; line-height: 1;
+    display: flex; align-items: center; justify-content: center; transition: 0.15s;
+}
+.schedule-interval-remove:hover { background: var(--danger-tint); color: var(--danger); }
+.schedule-add-interval {
+    align-self: flex-start;
+    border: none; background: none; color: var(--wa-green-dark);
+    font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 0; margin-top: 2px;
+}
+.schedule-add-interval:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+    .schedule-day-intervals { padding-left: 0; }
+    .schedule-time { width: 88px; }
+}
 
 /* Status do rascunho no rodapé */
 .bottom-nav-right { display: flex; align-items: center; gap: 15px; }
