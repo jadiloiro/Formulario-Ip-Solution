@@ -254,40 +254,40 @@
                         <button type="button" class="cfg4-nav-item active" data-sub="1">
                             <span class="cfg4-nav-icon"><i class="fa-solid fa-hourglass-half"></i></span>
                             <span class="cfg4-nav-text">
-                                <strong>Sub-passo 1</strong>
-                                <span>Cliente no Menu BOT</span>
+                                <strong>Cliente parado no menu</strong>
+                                <span>Sub-passo 1 de 5</span>
                             </span>
                             <i class="fa-solid fa-check cfg4-done hidden"></i>
                         </button>
                         <button type="button" class="cfg4-nav-item" data-sub="2">
                             <span class="cfg4-nav-icon"><i class="fa-solid fa-person-walking-arrow-right"></i></span>
                             <span class="cfg4-nav-text">
-                                <strong>Sub-passo 2</strong>
-                                <span>Abandono de Conversa</span>
+                                <strong>Cliente some da conversa</strong>
+                                <span>Sub-passo 2 de 5</span>
                             </span>
                             <i class="fa-solid fa-check cfg4-done hidden"></i>
                         </button>
                         <button type="button" class="cfg4-nav-item" data-sub="3">
                             <span class="cfg4-nav-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
                             <span class="cfg4-nav-text">
-                                <strong>Sub-passo 3</strong>
-                                <span>Erros de Menu</span>
+                                <strong>Opção inválida no menu</strong>
+                                <span>Sub-passo 3 de 5</span>
                             </span>
                             <i class="fa-solid fa-check cfg4-done hidden"></i>
                         </button>
                         <button type="button" class="cfg4-nav-item" data-sub="4">
                             <span class="cfg4-nav-icon"><i class="fa-solid fa-comment-dots"></i></span>
                             <span class="cfg4-nav-text">
-                                <strong>Sub-passo 4</strong>
-                                <span>Mensagens Automáticas</span>
+                                <strong>Mensagens automáticas</strong>
+                                <span>Sub-passo 4 de 5</span>
                             </span>
                             <i class="fa-solid fa-check cfg4-done hidden"></i>
                         </button>
                         <button type="button" class="cfg4-nav-item" data-sub="5">
                             <span class="cfg4-nav-icon"><i class="fa-solid fa-bolt"></i></span>
                             <span class="cfg4-nav-text">
-                                <strong>Sub-passo 5</strong>
-                                <span>Respostas Rápidas</span>
+                                <strong>Respostas rápidas</strong>
+                                <span>Sub-passo 5 de 5</span>
                             </span>
                             <span class="cfg4-optional">opcional</span>
                         </button>
@@ -324,7 +324,9 @@
                                 <select id="tempoBotFila" class="cfg4-select select-fila-unica"><option value="">Selecione a fila</option></select>
                             </div>
 
-                            <button type="button" class="cfg4-advance" onclick="cfg4Next(1)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                            <div class="cfg4-footer-bar">
+                                <button type="button" class="cfg4-advance" onclick="cfg4Next(1)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
                         </div>
 
                         <!-- SUB 2: Abandono de conversa -->
@@ -349,7 +351,9 @@
                                 <div class="msg-slot" data-slot="msgSemInteracao"></div>
                             </div>
 
-                            <button type="button" class="cfg4-advance" onclick="cfg4Next(2)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                            <div class="cfg4-footer-bar">
+                                <button type="button" class="cfg4-advance" onclick="cfg4Next(2)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
                         </div>
 
                         <!-- SUB 3: Erros de menu -->
@@ -377,7 +381,9 @@
                                 <div class="msg-slot" data-slot="msgTentativas"></div>
                             </div>
 
-                            <button type="button" class="cfg4-advance" onclick="cfg4Next(3)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                            <div class="cfg4-footer-bar">
+                                <button type="button" class="cfg4-advance" onclick="cfg4Next(3)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
                         </div>
 
                         <!-- SUB 4: Mensagens automáticas -->
@@ -385,7 +391,9 @@
                             <h3 class="cfg4-panel-title"><i class="fa-solid fa-comment-dots"></i> Mensagens automáticas</h3>
                             <p class="cfg4-panel-desc">Clique em uma mensagem para personalizar. A prévia atualiza na hora.</p>
                             <div id="mensagensPadraoContainer"></div>
-                            <button type="button" class="cfg4-advance" onclick="cfg4Next(4)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                            <div class="cfg4-footer-bar">
+                                <button type="button" class="cfg4-advance" onclick="cfg4Next(4)">Confirmar e Avançar <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
                         </div>
 
                         <!-- SUB 5: Respostas rápidas -->
@@ -398,7 +406,9 @@
                                 <tbody id="respostasTableBody"></tbody>
                             </table>
                             <button type="button" class="btn-add" id="addRespostaBtn">+ Criar resposta rápida</button>
-                            <button type="button" class="cfg4-advance" onclick="cfg4Next(5)" style="margin-top:16px;">Concluir Configurações <i class="fa-solid fa-check"></i></button>
+                            <div class="cfg4-footer-bar">
+                                <button type="button" class="cfg4-advance" onclick="cfg4Next(5)">Concluir Configurações <i class="fa-solid fa-check"></i></button>
+                            </div>
                         </div>
 
                     </div><!-- /cfg4-form -->
