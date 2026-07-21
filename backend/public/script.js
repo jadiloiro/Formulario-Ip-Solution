@@ -356,7 +356,7 @@ function nextStep() {
         showStep(currentStep);
         updateFilasDropdowns();
     } else {
-        // Última etapa: salva, envia para a API e gera o documento Word
+        // Última etapa: salva, envia para a API e gera o PDF
         updateProgress(currentStep);
         const draft = collectDraft();
         saveDraftNow();
@@ -364,11 +364,11 @@ function nextStep() {
         if (apiCtx.available) {
             finalizeSubmission(draft).then(ok => {
                 showToast(ok
-                    ? 'Levantamento enviado e documento Word gerado! 🎉'
+                    ? 'Levantamento enviado e PDF gerado! 🎉'
                     : 'Documento gerado! Mas o envio ao servidor falhou — tente novamente.', ok ? 'success' : 'error');
             });
         } else {
-            showToast('Formulário concluído! Documento Word gerado e baixado. 🎉', 'success');
+            showToast('Formulário concluído! PDF gerado e baixado. 🎉', 'success');
         }
     }
 }
@@ -1168,26 +1168,321 @@ function collectDraft() {
     };
 }
 
-/* ========================= Download do Documento Word (via endpoint NestJS) =========================
-   O endpoint GET /api/submissions/:id/download gera o .docx no servidor (Node + docx npm)
-   e serve como download direto. Sem CDN de terceiros, sem problemas de CORS. */
+/* ========================= Geração de PDF (jsPDF – 100% client-side) =========================
+   Nenhum backend necessário. O PDF é montado no navegador e baixado diretamente.          */
 
 function gerarDocumentoLevantamento(draft) {
-    if (apiCtx.available && apiCtx.submissionId) {
-        // Salva os dados mais recentes e inicia o download pelo backend
-        fetch(`/api/submissions/${apiCtx.submissionId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ formData: draft })
-        }).then(() => {
-            const a = document.createElement('a');
-            a.href = `/api/submissions/${apiCtx.submissionId}/download`;
-            a.download = 'Levantamento_IP_Solution.docx';
-            a.click();
-        }).catch(() => showToast('Erro ao salvar antes de gerar o documento.', 'error'));
-    } else {
-        // Modo offline: avisa que precisa do backend
-        showToast('Para gerar o documento Word, abra o formulário pelo endereço do servidor (http://localhost:3000).', 'error');
+    // Verifica se a biblioteca jsPDF carregou (requer internet para o CDN)
+    if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
+        showToast('⚠️ A biblioteca PDF não foi carregada. Verifique sua conexão com a internet e recarregue a página.', 'error');
+        return;
+    }
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const AZUL   = [0, 43, 94];      // #002b5e
+        const LARANJA = [232, 93, 4];    // #e85d04
+        const CINZA  = [80, 80, 80];
+        const BGCINZA = [245, 247, 250];
+        const W = 210, MARGIN = 15, CONTENT = W - MARGIN * 2;
+        let y = 0;
+
+        /* ── helpers ── */
+        function addPage() {
+            doc.addPage();
+            y = 20;
+            // rodapé com número de página
+            const total = doc.getNumberOfPages();
+            for (let p = 1; p <= total; p++) {
+                doc.setPage(p);
+                doc.setFontSize(8);
+                doc.setTextColor(160, 160, 160);
+                doc.text(`Levantamento IP Solution  •  Página ${p} de ${total}`, W / 2, 290, { align: 'center' });
+            }
+            doc.setPage(total);
+        }
+
+        function ensureSpace(needed) {
+            if (y + needed > 275) addPage();
+        }
+
+        function sectionTitle(title) {
+            ensureSpace(14);
+            doc.setFillColor(...AZUL);
+            doc.rect(MARGIN, y, CONTENT, 8, 'F');
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(255, 255, 255);
+            doc.text(title, MARGIN + 3, y + 5.5);
+            y += 10;
+            doc.setTextColor(...CINZA);
+        }
+
+        function field(label, value) {
+            if (!value && value !== 0) return;
+            const valStr = String(value).trim();
+            if (!valStr) return;
+            ensureSpace(12);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...AZUL);
+            doc.text(label + ':', MARGIN, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...CINZA);
+            const lines = doc.splitTextToSize(valStr, CONTENT - 45);
+            doc.text(lines, MARGIN + 45, y);
+            y += Math.max(6, lines.length * 5);
+        }
+
+        function msgBlock(titulo, texto) {
+            if (!texto) return;
+            ensureSpace(16);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...AZUL);
+            doc.text(titulo + ':', MARGIN, y);
+            y += 5;
+            doc.setFillColor(...BGCINZA);
+            const lines = doc.splitTextToSize(texto, CONTENT - 4);
+            const bh = lines.length * 4.5 + 5;
+            doc.rect(MARGIN, y, CONTENT, bh, 'F');
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...CINZA);
+            doc.setFontSize(8);
+            doc.text(lines, MARGIN + 2, y + 4);
+            y += bh + 4;
+        }
+
+        /* ═══════════════════════════════════════════════
+           CAPA
+        ═══════════════════════════════════════════════ */
+        // faixa superior azul
+        doc.setFillColor(...AZUL);
+        doc.rect(0, 0, W, 55, 'F');
+        // acento laranja
+        doc.setFillColor(...LARANJA);
+        doc.rect(0, 55, W, 3, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.text('IP Solution', W / 2, 22, { align: 'center' });
+        doc.setFontSize(13);
+        doc.text('Levantamento de Atendimento', W / 2, 33, { align: 'center' });
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Formulário de Configuração da Plataforma', W / 2, 43, { align: 'center' });
+
+        // data
+        const agora = new Date();
+        const dataStr = agora.toLocaleDateString('pt-BR') + '  ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        doc.setFontSize(8);
+        doc.setTextColor(180, 180, 180);
+        doc.text('Gerado em: ' + dataStr, W / 2, 50, { align: 'center' });
+
+        y = 70;
+
+        /* ═══════════════════════════════════════════════
+           PASSO 1 – FILAS
+        ═══════════════════════════════════════════════ */
+        const filas = draft.filas || [];
+        sectionTitle('1. Filas de Atendimento');
+        if (filas.length === 0) {
+            doc.setFontSize(8.5); doc.setTextColor(...CINZA);
+            doc.text('Nenhuma fila cadastrada.', MARGIN, y); y += 7;
+        } else {
+            doc.autoTable({
+                startY: y,
+                margin: { left: MARGIN, right: MARGIN },
+                head: [['#', 'Nome da Fila', 'Descrição']],
+                body: filas.map((f, i) => [i + 1, f.nome || '—', f.descricao || '—']),
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: BGCINZA },
+                theme: 'grid'
+            });
+            y = doc.lastAutoTable.finalY + 6;
+        }
+
+        /* ═══════════════════════════════════════════════
+           PASSO 2 – AGENTES
+        ═══════════════════════════════════════════════ */
+        const agentes = draft.agentes || [];
+        ensureSpace(20);
+        sectionTitle('2. Agentes');
+        if (agentes.length === 0) {
+            doc.setFontSize(8.5); doc.setTextColor(...CINZA);
+            doc.text('Nenhum agente cadastrado.', MARGIN, y); y += 7;
+        } else {
+            doc.autoTable({
+                startY: y,
+                margin: { left: MARGIN, right: MARGIN },
+                head: [['#', 'Nome', 'E-mail', 'Perfil', 'Filas']],
+                body: agentes.map((a, i) => [
+                    i + 1,
+                    a.nome || '—',
+                    a.email || '—',
+                    a.perfil || '—',
+                    (a.filas || []).join(', ') || '—'
+                ]),
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: BGCINZA },
+                theme: 'grid',
+                columnStyles: { 4: { cellWidth: 50 } }
+            });
+            y = doc.lastAutoTable.finalY + 6;
+        }
+
+        /* ═══════════════════════════════════════════════
+           PASSO 3 – HORÁRIOS
+        ═══════════════════════════════════════════════ */
+        ensureSpace(20);
+        sectionTitle('3. Horários de Atendimento');
+        const hor = draft.horarios || {};
+        field('Configuração', hor.modo === 'alterar' ? 'Horário personalizado' : 'Padrão (24h/7 dias)');
+        if (hor.modo === 'alterar' && hor.horarioCustom) {
+            field('Horário definido', hor.horarioCustom);
+        }
+        field('Fila fora do horário', hor.filaForaHorario || 'Não definida');
+
+        /* ═══════════════════════════════════════════════
+           PASSO 4 – CONFIGURAÇÕES GERAIS
+        ═══════════════════════════════════════════════ */
+        ensureSpace(20);
+        sectionTitle('4. Configurações Gerais');
+        const cfg = draft.configuracoes || {};
+
+        // Sub 1: Tempo no BOT
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+        ensureSpace(7); doc.text('■ Cliente parado no menu do BOT', MARGIN, y); y += 5;
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+        field('Tempo de espera',
+            cfg.tempoBot === 'alterar'
+                ? (cfg.tempoBotMinutos || '?') + ' minutos'
+                : '20 minutos (padrão)');
+        field('Ação após o tempo',
+            cfg.tempoBotAcao === 'direcionar'
+                ? 'Direcionar para fila: ' + (cfg.tempoBotFila || '?')
+                : 'Encerrar o atendimento');
+
+        // Sub 2: Abandono
+        ensureSpace(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+        doc.text('■ Abandono de conversa', MARGIN, y); y += 5;
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+        const semInt = cfg.semInteracao;
+        field('Tempo para encerramento',
+            semInt === 'alterar'  ? (cfg.semInteracaoMinutos || '?') + ' minutos' :
+            semInt === 'nao_encerrar' ? 'Nunca encerrar' : '24 horas (padrão)');
+        msgBlock('Mensagem de encerramento por falta de resposta', cfg.msgSemInteracao);
+
+        // Sub 3: Tentativas
+        ensureSpace(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+        doc.text('■ Erros de menu', MARGIN, y); y += 5;
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+        field('Limite de tentativas',
+            cfg.tentativasMode === 'alterar'
+                ? (cfg.tentativasQtd || '?') + ' tentativas'
+                : '5 tentativas (padrão)');
+        field('Fila para redirecionamento', cfg.tentativasFila || '—');
+        msgBlock('Mensagem de tentativas excedidas', cfg.msgTentativas);
+
+        // Sub 4: Mensagens automáticas
+        ensureSpace(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+        doc.text('■ Mensagens automáticas', MARGIN, y); y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+        const mensagens = [
+            { id: 'saudacaoAgente',  label: 'Saudação do agente' },
+            { id: 'msgFilaVazia',    label: 'Nenhum agente disponível' },
+            { id: 'msgOpcaoInvalida',label: 'Opção inválida' },
+            { id: 'msgFimSessao',    label: 'Fim de atendimento' },
+            { id: 'msgTransferencia',label: 'Transferência de atendimento' }
+        ];
+        mensagens.forEach(m => {
+            const modeKey = 'mode_' + m.id;
+            const isCustom = cfg[modeKey] === 'custom';
+            const texto = isCustom ? (cfg[m.id] || '') : null;
+            if (isCustom && texto) {
+                msgBlock(m.label + ' (personalizada)', texto);
+            } else {
+                field(m.label, 'Padrão do sistema');
+            }
+        });
+
+        // Sub 5: Respostas rápidas
+        const respostas = cfg.respostas || [];
+        if (respostas.length > 0) {
+            ensureSpace(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+            doc.text('■ Respostas rápidas', MARGIN, y); y += 5;
+            doc.autoTable({
+                startY: y,
+                margin: { left: MARGIN, right: MARGIN },
+                head: [['Título', 'Mensagem']],
+                body: respostas.map(r => [r.titulo || '—', r.mensagem || '—']),
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: BGCINZA },
+                theme: 'grid'
+            });
+            y = doc.lastAutoTable.finalY + 6;
+        }
+
+        /* ═══════════════════════════════════════════════
+           PASSO 5 – NÚMEROS
+        ═══════════════════════════════════════════════ */
+        ensureSpace(20);
+        sectionTitle('5. Números WhatsApp');
+        const nums = draft.numeros || {};
+        field('Número principal', nums.principal || '—');
+        field('URA (Unidade de Resposta Audível)', nums.ura === 'sim' ? 'Sim' : 'Não');
+
+        /* ═══════════════════════════════════════════════
+           PASSO 6 – AGENDA / CONTATOS
+        ═══════════════════════════════════════════════ */
+        ensureSpace(14);
+        sectionTitle('6. Agenda / Importação de Contatos');
+        const agenda = draft.agenda || {};
+        field('Arquivo CSV', agenda.csvNome || 'Não informado');
+        field('Total de registros', agenda.csvTotal != null ? String(agenda.csvTotal) : '—');
+
+        /* ═══════════════════════════════════════════════
+           PASSO 7 – FLUXO BOT
+        ═══════════════════════════════════════════════ */
+        ensureSpace(14);
+        sectionTitle('7. Fluxo do BOT');
+        const bot = draft.bot || {};
+        if (bot.fluxoJson) {
+            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+            doc.text('Fluxo configurado no editor visual (exportado em JSON).', MARGIN, y); y += 5;
+            try {
+                const parsed = typeof bot.fluxoJson === 'string' ? JSON.parse(bot.fluxoJson) : bot.fluxoJson;
+                const nos = Object.keys(parsed.drawflow?.Home?.data || {});
+                field('Número de nós no fluxo', String(nos.length));
+            } catch(_) {}
+        } else {
+            doc.setFontSize(8.5); doc.setTextColor(...CINZA);
+            doc.text('Fluxo BOT não configurado.', MARGIN, y); y += 5;
+        }
+
+        /* ═══════════════════════════════════════════════
+           RODAPÉ FINAL em todas as páginas
+        ═══════════════════════════════════════════════ */
+        const total = doc.getNumberOfPages();
+        for (let p = 1; p <= total; p++) {
+            doc.setPage(p);
+            doc.setFontSize(8);
+            doc.setTextColor(160, 160, 160);
+            doc.text(`Levantamento IP Solution  •  Página ${p} de ${total}`, W / 2, 290, { align: 'center' });
+        }
+
+        /* ── salva o PDF ── */
+        doc.save('Levantamento_IP_Solution.pdf');
+        showToast('PDF gerado e baixado com sucesso! 🎉', 'success');
+
+    } catch (err) {
+        console.error('Erro ao gerar PDF:', err);
+        showToast('Erro ao gerar o PDF: ' + err.message, 'error');
     }
 }
 
