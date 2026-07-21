@@ -25,7 +25,7 @@
     <!-- Sidebar (Light Mode) -->
     <aside class="sidebar">
         <!-- Logo IP Solution Interativa -->
-        <button type="button" class="logo-btn" onclick="resetForm()" aria-label="Voltar ao início">
+        <button type="button" class="logo-btn" onclick="resetAllData()" aria-label="Voltar ao início e reiniciar o formulário">
             <svg width="140" height="44" viewBox="0 0 180 56" xmlns="http://www.w3.org/2000/svg" aria-label="IP Solution" class="logo-svg">
               <g fill="none" fill-rule="evenodd">
                 <path d="M45 6c8.5 2 14.5 9.7 14.5 19s-6 17-14.5 19c9.8-1.6 17-10 17-19.9C62 14.2 54.8 5.7 45 6z" fill="var(--logo-accent)"/>
@@ -540,8 +540,6 @@
                 <!-- Elementos ocultos de compatibilidade (usados pelo rascunho e listeners do JS) -->
                 <input type="hidden" id="botMensagemInicial" value="Olá, bem-vindo(a) a *Nome da Empresa*! Para agilizarmos o seu atendimento, digite o número da opção desejada:">
                 <table hidden><tbody id="botOpcoesTableBody"></tbody></table>
-                <table hidden id="respostasTable"><tbody id="respostasTableBody"></tbody></table>
-                <button type="button" id="addRespostaBtn" hidden></button>
                 <div id="flowPreview" hidden></div>
 
             </div>

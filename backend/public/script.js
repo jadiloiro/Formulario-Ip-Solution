@@ -358,6 +358,7 @@ function nextStep() {
     } else {
         // Última etapa: salva, envia para a API e gera o PDF
         updateProgress(currentStep);
+        if (typeof window.ifeFlushSave === 'function') window.ifeFlushSave();
         const draft = collectDraft();
         saveDraftNow();
         gerarDocumentoLevantamento(draft);
@@ -1156,12 +1157,13 @@ function collectDraft() {
             principal: (document.getElementById('numeroPrincipal') || {}).value || '',
             ura: getRadio('ura')
         },
+        // O fluxo do BOT é editado visualmente no Passo 7 (motor Drawflow) e persistido
+        // em localStorage pelo próprio editor — lemos daqui para o PDF refletir o que
+        // o usuário realmente montou no quadro (e não um formulário legado escondido).
         bot: {
-            mensagemInicial: (document.getElementById('botMensagemInicial') || {}).value || '',
-            opcoes: Array.from(document.querySelectorAll('#botOpcoesTableBody tr')).map(tr => ({
-                texto: tr.querySelector('.opcao-texto').value,
-                fila: tr.querySelector('.opcao-fila').value
-            }))
+            fluxoJson: localStorage.getItem('ipsolution_flow_v2') || null,
+            resumoFluxo: (typeof window.ifeGetFlowSummary === 'function') ? window.ifeGetFlowSummary() : '',
+            totalBlocos: (typeof window.ifeGetFlowNodeCount === 'function') ? window.ifeGetFlowNodeCount() : 0
         },
         completedSteps: Array.from(completedSteps),
         savedAt: Date.now()
@@ -1452,14 +1454,18 @@ function gerarDocumentoLevantamento(draft) {
         ensureSpace(14);
         sectionTitle('7. Fluxo do BOT');
         const bot = draft.bot || {};
-        if (bot.fluxoJson) {
+        if (bot.resumoFluxo && bot.resumoFluxo.trim()) {
+            field('Blocos no fluxo', String(bot.totalBlocos || 0));
+            msgBlock('Resumo do fluxo montado no editor visual', bot.resumoFluxo);
+        } else if (bot.fluxoJson) {
+            // Fallback: rascunho antigo salvo antes desta versão, sem resumo pronto
             doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
             doc.text('Fluxo configurado no editor visual (exportado em JSON).', MARGIN, y); y += 5;
             try {
                 const parsed = typeof bot.fluxoJson === 'string' ? JSON.parse(bot.fluxoJson) : bot.fluxoJson;
                 const nos = Object.keys(parsed.drawflow?.Home?.data || {});
                 field('Número de nós no fluxo', String(nos.length));
-            } catch(_) {}
+            } catch (_) { /* JSON inválido, ignora */ }
         } else {
             doc.setFontSize(8.5); doc.setTextColor(...CINZA);
             doc.text('Fluxo BOT não configurado.', MARGIN, y); y += 5;
@@ -2529,4 +2535,9 @@ document.addEventListener('DOMContentLoaded', () => {
         starterTemplate();
         ifeSaveNow();
     };
+
+    /* Leitura pelo restante do app (ex.: collectDraft/PDF) — sempre a versão mais atual */
+    window.ifeGetFlowSummary = function () { return inited ? resumoTexto() : ''; };
+    window.ifeGetFlowNodeCount = function () { return inited ? Object.keys(exportData()).length : 0; };
+    window.ifeFlushSave = function () { if (inited) ifeSaveNow(); };
 })();
