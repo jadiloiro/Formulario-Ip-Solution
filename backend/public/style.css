@@ -1826,10 +1826,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .cfg4-select:hover { border-color: var(--border-color-strong); }
 
-/* Barra fixa no rodapé do painel: o botão nunca fica escondido, mesmo com muito conteúdo acima */
+/* Fica ao final do conteúdo do painel: com "position: sticky" o botão grudava no fundo
+   da área visível DURANTE a rolagem, sobrepondo e cortando o último card (ex: painel
+   "Mensagens automáticas", que tem mais conteúdo que os demais sub-passos). Com
+   margin-top: auto ele só "gruda" no rodapé quando sobra espaço (flex) — quando o
+   conteúdo é maior que a área visível, ele simplesmente fica logo após o último item,
+   sem nunca sobrepor nada. */
 .cfg4-footer-bar {
-    position: sticky;
-    bottom: 0;
     margin: auto -26px -18px;
     padding: 14px 26px 18px;
     background: var(--surface);
