@@ -7,8 +7,37 @@ const STORAGE = {
     STEP: 'currentStep',
     THEME: 'theme',
     DRAFT: 'ipsolution_form_draft',
-    SHARED: 'ipsolution_shared_flow_data'
+    SHARED: 'ipsolution_shared_flow_data',
+    ONBOARDING_TYPE: 'ipsolution_onboarding_type'
 };
+
+/* ========================= Portal de entrada: tipo de onboarding =========================
+   Telefonia ainda não existe — só "WhatsApp" desbloqueia o formulário. A escolha fica salva
+   no localStorage (lida também no <head> de index.html, antes do 1º paint, pra não piscar
+   o formulário atrás do portal quando o cliente já escolheu antes). */
+function initOnboardingGate() {
+    const whatsappBtn = document.getElementById('gateOptionWhatsapp');
+    const telefoniaBtn = document.getElementById('gateOptionTelefonia');
+    const message = document.getElementById('gateMessage');
+    if (!whatsappBtn || !telefoniaBtn) return;
+
+    whatsappBtn.addEventListener('click', () => {
+        localStorage.setItem(STORAGE.ONBOARDING_TYPE, 'whatsapp');
+        document.documentElement.setAttribute('data-onboarding', 'unlocked');
+    });
+    telefoniaBtn.addEventListener('click', () => {
+        if (message) message.hidden = false;
+    });
+
+    const backBtn = document.getElementById('btnBackToGate');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            localStorage.removeItem(STORAGE.ONBOARDING_TYPE);
+            document.documentElement.removeAttribute('data-onboarding');
+            if (message) message.hidden = true;
+        });
+    }
+}
 
 /* Utilitário: adia a execução até o usuário parar de digitar */
 function debounce(fn, wait) {
@@ -671,9 +700,12 @@ function filterMultiSelectOptions(ms, term) {
 }
 
 function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return (str == null ? '' : String(str))
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function buildMultiSelect(ms, filas) {
@@ -2347,6 +2379,8 @@ function setupConfigAccordion() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initOnboardingGate();
+
     // Detecta o backend NestJS em segundo plano (não bloqueia o carregamento)
     initApiSync();
 

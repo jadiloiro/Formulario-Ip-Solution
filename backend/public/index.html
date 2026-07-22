@@ -21,9 +21,47 @@
             var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', theme);
         })();
+        // Evita o "flash" do formulário antes do portal de entrada: se o cliente já
+        // escolheu WhatsApp numa visita anterior, desbloqueia antes da primeira renderização.
+        (function () {
+            if (localStorage.getItem('ipsolution_onboarding_type') === 'whatsapp') {
+                document.documentElement.setAttribute('data-onboarding', 'unlocked');
+            }
+        })();
     </script>
 </head>
 <body>
+
+    <!-- Portal de entrada: escolha do tipo de onboarding -->
+    <div class="onboarding-gate" id="onboardingGate">
+        <div class="gate-card">
+            <svg width="140" height="44" viewBox="0 0 180 56" xmlns="http://www.w3.org/2000/svg" aria-label="IP Solution" class="logo-svg gate-logo">
+              <g fill="none" fill-rule="evenodd">
+                <path d="M45 6c8.5 2 14.5 9.7 14.5 19s-6 17-14.5 19c9.8-1.6 17-10 17-19.9C62 14.2 54.8 5.7 45 6z" fill="var(--logo-accent)"/>
+                <rect x="6" y="16" width="7" height="26" rx="1.5" fill="var(--logo-mark)"/>
+                <rect x="6" y="4" width="7" height="7" rx="1.5" fill="var(--logo-mark)"/>
+                <path d="M20 4h16.5c7.5 0 13 5.3 13 12.6 0 7.3-5.5 12.6-13 12.6H27v13H20V4zm7 6.4v11.8h9c3.6 0 6-2.4 6-5.9s-2.4-5.9-6-5.9h-9z" fill="var(--logo-mark)"/>
+                <text x="2" y="52" font-family="'Segoe UI', Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1.5" fill="var(--logo-word)">SOLUTION</text>
+              </g>
+            </svg>
+            <h1 class="gate-title">Qual tipo de onboarding você vai configurar?</h1>
+            <p class="gate-sub">Escolha uma opção para continuar</p>
+            <div class="gate-options">
+                <button type="button" class="gate-option gate-option-whatsapp" id="gateOptionWhatsapp">
+                    <i class="fa-brands fa-whatsapp gate-option-icon" aria-hidden="true"></i>
+                    <span class="gate-option-title">WhatsApp</span>
+                    <span class="gate-option-desc">Filas, agentes, horários e fluxo do BOT</span>
+                </button>
+                <button type="button" class="gate-option gate-option-telefonia" id="gateOptionTelefonia">
+                    <span class="gate-option-badge">Em breve</span>
+                    <i class="fa-solid fa-phone gate-option-icon" aria-hidden="true"></i>
+                    <span class="gate-option-title">Telefonia</span>
+                    <span class="gate-option-desc">Onboarding para atendimento telefônico</span>
+                </button>
+            </div>
+            <p class="gate-message" id="gateMessage" hidden>Onboarding de Telefonia em breve. Por enquanto, essa opção ainda não está disponível.</p>
+        </div>
+    </div>
 
     <!-- Sidebar (Light Mode) -->
     <aside class="sidebar">
@@ -98,6 +136,9 @@
                 <p class="header-sub">Leva cerca de 10 minutos — e seu progresso é salvo automaticamente, então pode parar e continuar quando quiser.</p>
             </div>
             <div class="header-actions">
+                <button type="button" class="btn-back-gate" id="btnBackToGate" title="Voltar para escolher o tipo de onboarding (caso tenha selecionado errado)">
+                    <i class="fa-solid fa-arrow-left"></i> Trocar tipo de onboarding
+                </button>
                 <button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
                     <span class="theme-toggle-icon">🌙</span>
                     <span class="theme-toggle-label">Tema escuro</span>
