@@ -28,13 +28,17 @@ NestJS app, single feature module:
 ### Frontend (`backend/public/`)
 Plain HTML/CSS/JS, no framework, no bundler. Libraries (Drawflow, docx, Font Awesome) are loaded from CDN in the HTML `<head>`, not via npm.
 - `index.html` + `script.js` + `style.css`: the 7-step onboarding form (`currentStep`/`totalSteps` in `script.js`). Step definitions, validation (`validateStep`), draft collection (`collectDraft`) and restoration (`restoreDraft`) all live in this one large `script.js` file.
-- `Flowchart.html` + `Flowchart.js` + `Flowchart.css` (referenced from HTML in lowercase — relies on Windows' case-insensitive filesystem; watch for this if ever deployed on Linux/case-sensitive storage): a separate page hosting a Drawflow instance that builds the chatbot's action-block flow from the queues/agents captured in the main form.
+- `Flowchart.html` + `Flowchart.js` + `Flowchart.css`: a separate page hosting a Drawflow instance that builds the chatbot's action-block flow from the queues/agents captured in the main form. Not currently linked from `index.html` — reachable only by navigating to it directly. References must match the files' exact casing (capital `Flowchart.*`) since deploy targets are Linux (case-sensitive filesystem), unlike local Windows dev.
 - **Dual online/offline mode** (`script.js`, top of file, `apiCtx`/`initApiSync`): on load, the frontend pings `GET /api/health`; if it responds, it fetches/creates a submission via `/api/submissions/current` and mirrors all further changes to the API (`pushDraftToApi`, `PUT .../flow`, `POST .../submit`). If the API is unreachable (e.g. the HTML is opened straight from disk, or the backend is down), everything keeps working purely off `localStorage` (`STORAGE` keys: `currentStep`, `theme`, `ipsolution_form_draft`, `ipsolution_shared_flow_data`; flow graph under `ipsolution_flow_v2`). **Any new persistence feature needs to handle both paths** — localStorage is the source of truth locally, the API call is best-effort and swallows failures.
 - Document generation (`gerarDocumentoLevantamento`) builds a `.docx` client-side from the collected draft using the `docx` CDN library.
 
 ## Deployment
 
-`docker-compose.yml` (repo root) runs Postgres + the built API (`backend/Dockerfile`) for a VM deploy: copy `.env.example` to `.env` next to it (sets `DB_USERNAME`/`DB_PASSWORD`/`DB_DATABASE`), then `docker compose up -d --build`. For local dev outside Docker, run `docker compose up -d postgres` only, then `npm run start:dev` from `backend/` with its own `backend/.env` (copy from `backend/.env.example`, `DB_HOST=localhost`).
+Production target is a Debian VM running everything **natively** (no Docker) — Postgres installed via `apt`, the API run directly with Node (`backend/deploy/ipsolution.service` is a systemd unit template: `WorkingDirectory`, `EnvironmentFile` and `User` are placeholders, adjust to the real install path). `DB_HOST=localhost` in `backend/.env` since Postgres and the app share the same machine.
+
+Steps on the VM: `apt install postgresql`, create a role/db, `npm ci && npm run build` in `backend/`, `npm run migration:run` once, then start via the systemd unit (`systemctl enable --now ipsolution`) or `pm2`.
+
+`docker-compose.yml` + `backend/Dockerfile` (repo root / `backend/`) are kept as an alternative — e.g. for spinning up just Postgres locally during development (`docker compose up -d postgres`) without installing it on your machine. They are not the deploy path currently in use.
 
 ## Repo hygiene gotchas
 
