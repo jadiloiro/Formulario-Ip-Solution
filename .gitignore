@@ -4,3 +4,5 @@ backend/coverage/
 backend/tsconfig.tsbuildinfo
 backend/data/*.db
 backend/data/*.db-journal
+.env
+backend/.env

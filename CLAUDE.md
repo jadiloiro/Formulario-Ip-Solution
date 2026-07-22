@@ -8,15 +8,17 @@ IP Solution's onboarding tool: a multi-step survey form (client queues, agents, 
 
 ## Commands
 
-There are no lint or test scripts defined in `package.json` — don't assume `npm test`/`npm run lint` exist.
+`npm test` (unit, Jest, mocked repositories), `npm run test:e2e` (supertest against a real Postgres — needs one reachable, see below), and `npm run lint` (ESLint flat config) all exist in `backend/package.json`.
 
 Server runs at `http://localhost:3000`. The frontend is served directly from `backend/public/` by the same Nest process (`ServeStaticModule`), so there is no separate frontend dev server and no build step for the frontend — HTML/CSS/JS in `public/` are edited and served as-is.
+
+Needs a running Postgres — either `docker compose up -d postgres` (repo root) or your own instance, configured via `backend/.env` (copy from `backend/.env.example`). Migrations run automatically on boot (`migrationsRun: true`); to manage them manually: `npm run migration:generate -- src/migrations/Name`, `npm run migration:run`, `npm run migration:revert`.
 
 ## Architecture
 
 ### Backend (`backend/src/`)
 NestJS app, single feature module:
-- `app.module.ts` wires together `TypeOrmModule.forRoot({ type: 'sqlite', database: 'data/ipsolution.db', autoLoadEntities: true, synchronize: true })` and `ServeStaticModule.forRoot({ rootPath: 'public' })`. To switch to Postgres/MySQL in production, this is the only block that needs to change.
+- `app.module.ts` wires `TypeOrmModule.forRootAsync` (options from `src/config/database.config.ts`'s `buildDataSourceOptions()`, reading `DB_HOST`/`DB_PORT`/`DB_USERNAME`/`DB_PASSWORD`/`DB_DATABASE` env vars) and `ServeStaticModule.forRoot({ rootPath: 'public' })`. Postgres only — `synchronize` is `false`; schema changes go through TypeORM migrations in `src/migrations/`, applied automatically on boot (`migrationsRun: true`). `src/data-source.ts` is the standalone `DataSource` the TypeORM CLI uses for `npm run migration:generate/run/revert` (reuses the same `buildDataSourceOptions()`, loads `.env` itself since it runs outside Nest's DI).
 - `main.ts`: CORS enabled globally, global `ValidationPipe({ whitelist: true, transform: true })`, and `app.setGlobalPrefix('api', { exclude: [''] })` — so `/` still serves the static frontend but all controller routes live under `/api/*`.
 - `submissions/` is the only domain module: one entity (`Submission`) with `formData` and `flowData` stored as `simple-json` blobs (no normalized schema — the form's shape lives in the frontend, not in migrations). `status` is `'rascunho' | 'enviado'`.
 - `GET /api/submissions/current` is the key endpoint the frontend treats as its "session": it returns the most recent draft (`rascunho`) or creates an empty one. There's no auth/user concept — one global pool of submissions.
@@ -30,6 +32,10 @@ Plain HTML/CSS/JS, no framework, no bundler. Libraries (Drawflow, docx, Font Awe
 - **Dual online/offline mode** (`script.js`, top of file, `apiCtx`/`initApiSync`): on load, the frontend pings `GET /api/health`; if it responds, it fetches/creates a submission via `/api/submissions/current` and mirrors all further changes to the API (`pushDraftToApi`, `PUT .../flow`, `POST .../submit`). If the API is unreachable (e.g. the HTML is opened straight from disk, or the backend is down), everything keeps working purely off `localStorage` (`STORAGE` keys: `currentStep`, `theme`, `ipsolution_form_draft`, `ipsolution_shared_flow_data`; flow graph under `ipsolution_flow_v2`). **Any new persistence feature needs to handle both paths** — localStorage is the source of truth locally, the API call is best-effort and swallows failures.
 - Document generation (`gerarDocumentoLevantamento`) builds a `.docx` client-side from the collected draft using the `docx` CDN library.
 
+## Deployment
+
+`docker-compose.yml` (repo root) runs Postgres + the built API (`backend/Dockerfile`) for a VM deploy: copy `.env.example` to `.env` next to it (sets `DB_USERNAME`/`DB_PASSWORD`/`DB_DATABASE`), then `docker compose up -d --build`. For local dev outside Docker, run `docker compose up -d postgres` only, then `npm run start:dev` from `backend/` with its own `backend/.env` (copy from `backend/.env.example`, `DB_HOST=localhost`).
+
 ## Repo hygiene gotchas
 
-- There is no `.gitignore` anywhere in the repo. `backend/node_modules/` and `backend/dist/` are committed, and the runtime SQLite file `backend/data/ipsolution.db` is tracked in git too (it shows up modified after any local run). Be deliberate about what you `git add` — don't assume the usual ignore patterns apply.
+- `.gitignore` (repo root) excludes `backend/node_modules/`, `backend/dist/`, `backend/coverage/`, and `.env` files — but they were committed to git history before it existed, so a fresh `git clone` won't have them; `npm install` and copying `.env.example` are still required after cloning.

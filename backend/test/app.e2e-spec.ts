@@ -1,22 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, getDataSourceToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import request = require('supertest');
 import { SubmissionsModule } from '../src/submissions/submissions.module';
 import { HealthModule } from '../src/health/health.module';
+import { buildDataSourceOptions } from '../src/config/database.config';
 
+/**
+ * Precisa de um Postgres alcançável (DB_HOST/DB_PORT/... ou os defaults de
+ * buildDataSourceOptions). Rode `docker compose up -d postgres` na raiz do
+ * repo antes de `npm run test:e2e`.
+ */
 describe('Submissions (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
-        TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
-          autoLoadEntities: true,
-          synchronize: true,
-        }),
+        TypeOrmModule.forRoot(buildDataSourceOptions()),
         SubmissionsModule,
         HealthModule,
       ],
@@ -26,6 +28,10 @@ describe('Submissions (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     app.setGlobalPrefix('api', { exclude: [''] });
     await app.init();
+
+    // Garante uma tabela vazia a cada rodada, já que agora é um Postgres real e persistente.
+    const dataSource = app.get<DataSource>(getDataSourceToken());
+    await dataSource.query('TRUNCATE TABLE submissions');
   });
 
   afterAll(async () => {
