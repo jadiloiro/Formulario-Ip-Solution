@@ -16,15 +16,6 @@ let sharedData = { filas: [], agentesPorFila: {}, mensagemInicial: '', horarioTe
 const api = { available: false, submissionId: null };
 
 /* ========================= Utilidades ========================= */
-function escapeHtml(str) {
-    return (str == null ? '' : String(str))
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
 function fcToast(message, type = 'info') {
     const container = document.getElementById('fcToastContainer');
     const toast = document.createElement('div');
@@ -32,14 +23,6 @@ function fcToast(message, type = 'info') {
     toast.textContent = message;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3200);
-}
-
-function debounce(fn, wait) {
-    let t;
-    return function (...args) {
-        clearTimeout(t);
-        t = setTimeout(() => fn.apply(this, args), wait);
-    };
 }
 
 /* ========================= Tema ========================= */
@@ -693,7 +676,7 @@ async function initApi() {
     try {
         const health = await fetch('/api/health');
         if (!health.ok) return null;
-        const current = await fetch('/api/submissions/current');
+        const current = await fetch(`/api/submissions/current?sessionId=${encodeURIComponent(getClientId())}`);
         if (!current.ok) return null;
         const submission = await current.json();
         api.available = true;

@@ -39,15 +39,6 @@ function initOnboardingGate() {
     }
 }
 
-/* Utilitário: adia a execução até o usuário parar de digitar */
-function debounce(fn, wait) {
-    let t;
-    return function (...args) {
-        clearTimeout(t);
-        t = setTimeout(() => fn.apply(this, args), wait);
-    };
-}
-
 /* ========================= API (backend NestJS, opcional) =========================
    Se o backend estiver servindo a página, o rascunho ganha backup no servidor
    e o "Finalizar" envia o levantamento de verdade. Sem backend, tudo segue
@@ -59,7 +50,7 @@ async function initApiSync() {
     try {
         const health = await fetch('/api/health');
         if (!health.ok) return;
-        const current = await fetch('/api/submissions/current');
+        const current = await fetch(`/api/submissions/current?sessionId=${encodeURIComponent(getClientId())}`);
         if (!current.ok) return;
         const submission = await current.json();
         apiCtx.available = true;
@@ -697,15 +688,6 @@ function filterMultiSelectOptions(ms, term) {
     });
     const emptyMsg = ms.querySelector('.multi-select-empty');
     if (emptyMsg) emptyMsg.classList.toggle('hidden', anyVisible);
-}
-
-function escapeHtml(str) {
-    return (str == null ? '' : String(str))
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 function buildMultiSelect(ms, filas) {
