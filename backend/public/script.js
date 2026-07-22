@@ -2455,11 +2455,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') jadiboTogglePanel(true);
     });
 
-    // ── Sidebar auto-colapso ──────────────────────────────────────────────────
+    // ── Sidebar: recolher/expandir manualmente (botão), sem auto-colapso por hover ──
     const sidebar   = document.getElementById('sidebar') || document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
     const bottomNav   = document.querySelector('.bottom-nav');
-    let collapseTimer = null;
+    const SIDEBAR_COLLAPSED_KEY = 'ipsolution_sidebar_collapsed';
 
     function syncBottomNav() {
         const w = sidebar && sidebar.classList.contains('collapsed') ? 64 : 260;
@@ -2467,25 +2467,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mainContent) mainContent.style.marginLeft = w + 'px';
     }
 
-    function collapseSidebar() {
-        if (sidebar) { sidebar.classList.add('collapsed'); syncBottomNav(); }
-    }
-    function expandSidebar() {
-        clearTimeout(collapseTimer);
-        if (sidebar) { sidebar.classList.remove('collapsed'); syncBottomNav(); }
+    function setSidebarCollapsed(collapsed) {
+        if (!sidebar) return;
+        sidebar.classList.toggle('collapsed', collapsed);
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
+        syncBottomNav();
     }
 
-    if (sidebar) {
-        sidebar.addEventListener('mouseenter', expandSidebar);
-        sidebar.addEventListener('mouseleave', () => {
-            collapseTimer = setTimeout(collapseSidebar, 3000);
-        });
-        sidebar.addEventListener('focusin', expandSidebar);
-        sidebar.addEventListener('focusout', () => {
-            collapseTimer = setTimeout(collapseSidebar, 3000);
-        });
+    if (sidebar && localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1') {
+        sidebar.classList.add('collapsed');
     }
     syncBottomNav();
+
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', () => {
+            setSidebarCollapsed(!sidebar.classList.contains('collapsed'));
+        });
+    }
 
     document.getElementById('filasTableBody').addEventListener('input', function (e) {
         if (e.target.classList.contains('fila-nome')) {
