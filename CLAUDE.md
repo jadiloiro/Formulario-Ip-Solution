@@ -4,19 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-IP Solution's onboarding tool: a multi-step survey form (client queues, agents, hours, BOT config) plus a visual chatbot-flow editor (Drawflow), backed by a small NestJS API. Everything (backend + frontend) lives in `backend/`; the repo root only additionally has `imagens/` (logo assets). Code, comments and UI text are in Portuguese (pt-BR) — match that when editing.
+IP Solution's onboarding tool: a multi-step survey form (client queues, agents, hours, BOT config) plus a visual chatbot-flow editor (Drawflow), backed by a small NestJS API. Code, comments and UI text are in Portuguese (pt-BR) — match that when editing.
 
 ## Commands
-
-All commands run from `backend/`:
-
-```bash
-npm install
-npm run start:dev    # NestJS with watch/reload — primary dev workflow
-npm run start         # no watch
-npm run build          # nest build -> dist/
-npm run start:prod    # node dist/main (after build)
-```
 
 There are no lint or test scripts defined in `package.json` — don't assume `npm test`/`npm run lint` exist.
 

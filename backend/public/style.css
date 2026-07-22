@@ -1,4 +1,13 @@
 :root {
+    /* Tipografia: Space Grotesk para títulos/estrutura (dá caráter técnico ao "montar um fluxo"),
+       IBM Plex Sans no corpo (alta legibilidade em formulário denso), Plex Mono para dados/números */
+    --font-display: 'Space Grotesk', 'Segoe UI', Tahoma, sans-serif;
+    --font-body: 'IBM Plex Sans', 'Segoe UI', Tahoma, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+    /* Controles nativos do navegador (input, select, time picker) e prévias que simulam
+       o WhatsApp real: usam a fonte do sistema, nunca a webfont — senão o "chrome" nativo
+       (seta do select, ícone do relógio) destoa do texto, e a prévia perde o realismo */
+    --font-native: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --primary-blue: #002b5e;
     --primary-blue-light: #0a4488;
     --action-orange: #e85d04;
@@ -78,7 +87,10 @@ body, .sidebar, .form-card, .form-control, .step-toolbar, .toolbar-panel,
     transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-body); }
+/* Controles nativos com "chrome" desenhado pelo SO (seta do select, ícone do time picker):
+   mantêm a fonte do sistema, senão o ícone nativo destoa do texto */
+input, select, textarea { font-family: var(--font-native); }
 
 body { background-color: var(--bg-light); display: flex; min-height: 100vh; color: var(--text-dark); }
 
@@ -195,7 +207,17 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 
 /* Header & Top Wizard */
 .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 10px; }
-.header-top h1 { font-size: 20px; font-weight: 500; color: var(--primary-blue); }
+.header-eyebrow {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--action-orange);
+    margin-bottom: 6px;
+}
+.header-top h1 { font-family: var(--font-display); font-size: 25px; font-weight: 600; letter-spacing: -0.01em; color: var(--primary-blue); }
 
 .theme-toggle {
     display: flex;
@@ -216,7 +238,16 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .theme-toggle-icon { font-size: 15px; line-height: 1; }
 
 .top-wizard { display: flex; justify-content: space-between; position: relative; margin-bottom: 18px; padding: 0 20px; }
-.top-wizard::before { content: ''; position: absolute; top: 15px; left: 40px; right: 40px; height: 2px; background: var(--border-color); z-index: 1; }
+.top-wizard::before {
+    content: '';
+    position: absolute;
+    top: 15px; left: 40px; right: 40px;
+    height: 2px;
+    background-image: linear-gradient(90deg, var(--border-color-strong) 0 6px, transparent 6px 12px);
+    background-size: 12px 2px;
+    background-repeat: repeat-x;
+    z-index: 1;
+}
 
 /* ================= Step Toolbar (Conceito / Modelos / Dicas / Anexos) ================= */
 /* Subtítulo do cabeçalho: define expectativa de tempo/esforço */
@@ -294,6 +325,7 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .attach-badge {
     background: var(--action-orange);
     color: var(--white);
+    font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 700;
     min-width: 16px;
@@ -378,27 +410,47 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
     flex-shrink: 0;
 }
 .attach-list-empty { font-size: 12px; color: var(--text-muted); text-align: center; padding: 6px 0 0; }
-.wizard-step { display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2; position: relative; font-size: 13px; color: var(--text-muted); cursor: pointer; }
+.wizard-step { display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2; position: relative; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; }
 .wizard-step .circle { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 2px solid var(--border-color); display: flex; justify-content: center; align-items: center; font-weight: bold; transition: 0.3s; }
-.wizard-step.active .circle { border-color: var(--primary-blue); background: var(--primary-blue); color: var(--white); }
-.wizard-step.completed .circle { border-color: var(--primary-blue); color: var(--primary-blue); }
-.wizard-step.completed .circle::after { content: '✓'; }
+/* Passo atual: preenchido + pulso sutil, como um indicador de mensagem chegando */
+.wizard-step.active .circle { border-color: var(--primary-blue); background: var(--primary-blue); color: var(--white); animation: wizardPulse 2s ease-out infinite; }
+/* Passo concluído: check estilo "mensagem entregue" no verde do WhatsApp — a cor do produto final */
+.wizard-step.completed .circle { border-color: var(--wa-green); background: var(--wa-green); color: transparent; }
+.wizard-step.completed .circle i { display: none; }
+.wizard-step.completed .circle::after { content: '✓'; color: var(--white); font-size: 14px; }
+@keyframes wizardPulse {
+    0%   { box-shadow: 0 0 0 0 var(--accent-tint-15); }
+    70%  { box-shadow: 0 0 0 8px rgba(0,0,0,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+}
 
 /* Form Card */
 .form-card { background: var(--surface); border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); margin-bottom: 80px; }
 /* Card entrance — added by JS on step change */
 .form-card.fade-enter { animation: fadeIn 0.35s cubic-bezier(0.22,1,0.36,1) both; }
 .form-card.fade-exit  { animation: fadeOut 0.2s ease forwards; }
-.step-title { font-size: 22px; color: var(--primary-blue); margin-bottom: 5px; }
+.step-title { font-family: var(--font-display); font-size: 23px; font-weight: 600; letter-spacing: -0.01em; color: var(--primary-blue); margin-bottom: 5px; }
 .step-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
 
 /* Form Elements */
 .form-group { margin-bottom: 20px; }
 .form-group label { display: block; font-weight: 500; margin-bottom: 8px; font-size: 14px; }
 .form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius); font-size: 14px; transition: border 0.2s, box-shadow 0.2s; background: var(--surface); color: var(--text-dark); }
+.form-control:hover { border-color: var(--border-color-strong); }
 .form-control:focus { outline: none; border-color: var(--primary-blue); box-shadow: 0 0 0 3px var(--accent-tint-10); }
 .form-control.field-error { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-tint); }
 textarea.form-control { resize: vertical; min-height: 80px; }
+/* Select nativo: substitui a seta padrão do SO por uma seta fina consistente com o resto da UI */
+select.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 10px 6px;
+    padding-right: 34px;
+    cursor: pointer;
+}
 
 /* Dynamic Table */
 .dynamic-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
@@ -669,7 +721,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .msg-controls { flex: 1; min-width: 240px; }
 .msg-custom { margin-top: 10px; min-height: 90px; font-size: 13px; }
 
-/* Prévia estilo WhatsApp: o cliente vê exatamente o que receberá */
+/* Prévia estilo WhatsApp: o cliente vê exatamente o que receberá — por isso usa a fonte
+   nativa do sistema (--font-native), igual ao app real, e não a tipografia de marca */
 .wa-preview {
     flex: 1;
     min-width: 250px;
@@ -679,6 +732,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     border-radius: 10px;
     padding: 14px;
     border: 1px solid var(--border-color);
+    font-family: var(--font-native);
 }
 [data-theme="dark"] .wa-preview { background: #0b141a; }
 
@@ -843,7 +897,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     border-radius: 6px;
     padding: 6px 8px;
     font-size: 13px;
-    font-family: inherit;
     background: var(--surface);
     color: var(--text-dark);
     width: 100px;
@@ -889,11 +942,13 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 /* Footer Navigation */
 .bottom-nav { position: fixed; bottom: 0; left: 260px; right: 0; background: var(--surface); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 10; transition: left 0.28s cubic-bezier(0.4,0,0.2,1); }
 .sidebar.collapsed ~ * .bottom-nav { left: 64px; }
-.btn { padding: 12px 25px; border-radius: var(--radius); font-size: 14px; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
+.btn { padding: 12px 25px; border-radius: var(--radius); font-size: 14px; font-weight: bold; cursor: pointer; border: none; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s; }
 .btn-outline { background: var(--surface); border: 1px solid var(--border-color); color: var(--text-dark); }
 .btn-outline:hover { background: var(--surface-hover); }
 .btn-primary { background: var(--action-orange); color: var(--white); }
 .btn-primary:hover { background: var(--action-orange-dark); }
+.btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn:not(:disabled):active { transform: translateY(0); }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Toasts */
@@ -1272,8 +1327,24 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 .node-textarea, .node-body textarea { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 7px 9px; font-size: 12px; font-family: inherit; background: #f8fafc; color: #1e293b; resize: vertical; min-height: 52px; line-height: 1.45; transition: border-color 0.15s; }
 .node-textarea:focus, .node-body textarea:focus { outline: none; border-color: #3b82f6; background: #fff; }
 [data-theme="dark"] .node-textarea, [data-theme="dark"] .node-body textarea { background: #0f172a; border-color: #2d3f54; color: #e2e8f0; }
-.node-select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 7px 9px; font-size: 12px; font-family: inherit; background: #f8fafc; color: #1e293b; cursor: pointer; }
-[data-theme="dark"] .node-select { background: #0f172a; border-color: #2d3f54; color: #e2e8f0; }
+.node-select {
+    width: 100%;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 7px 28px 7px 9px;
+    font-size: 12px;
+    font-family: inherit;
+    background-color: #f8fafc;
+    color: #1e293b;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    background-size: 9px 6px;
+}
+[data-theme="dark"] .node-select { background-color: #0f172a; border-color: #2d3f54; color: #e2e8f0; }
 .node-input-num { width: 72px; border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 7px 9px; font-size: 13px; font-family: inherit; background: #f8fafc; color: #1e293b; text-align: center; }
 .suffix-label { font-size: 12px; color: #64748b; font-weight: 500; }
 
@@ -1574,14 +1645,22 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     width: 100%;
     border: 1.5px solid var(--border-color);
     border-radius: 8px;
-    padding: 9px 12px;
+    padding: 9px 34px 9px 12px;
     font-size: 13px;
     font-family: inherit;
-    background: var(--surface);
+    background-color: var(--surface);
     color: var(--text-dark);
     cursor: pointer;
     margin-top: 6px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 10px 6px;
+    transition: border-color 0.2s;
 }
+.cfg4-select:hover { border-color: var(--border-color-strong); }
 
 /* Barra fixa no rodapé do painel: o botão nunca fica escondido, mesmo com muito conteúdo acima */
 .cfg4-footer-bar {
@@ -1663,12 +1742,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 #cfg4-sub4 .radio-group { display: flex; gap: 16px; font-size: 13px; margin: 8px 0 0; }
 
 /* ─── Coluna 3: Prévia WhatsApp ─── */
+/* Simula a tela do WhatsApp real: fonte nativa do sistema, não a tipografia de marca */
 .cfg4-preview {
     display: flex;
     flex-direction: column;
     background: #dfe7ec url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='30' cy='30' r='1.5' fill='%23c7d0d5' opacity='0.7'/%3E%3C/svg%3E");
     border-left: 1px solid var(--border-color);
     overflow: hidden;
+    font-family: var(--font-native);
 }
 [data-theme="dark"] .cfg4-preview {
     background: #111b21;

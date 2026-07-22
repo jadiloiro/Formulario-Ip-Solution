@@ -3,6 +3,9 @@
    ============================================================== */
 
 :root {
+    --font-display: 'Space Grotesk', 'Segoe UI', Tahoma, sans-serif;
+    --font-body: 'IBM Plex Sans', 'Segoe UI', Tahoma, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
     --primary-blue: #002b5e;
     --primary-blue-light: #0a4488;
     --action-orange: #e85d04;
@@ -25,10 +28,12 @@
     --scrollbar-thumb: #cbd5e1;
     --radius: 8px;
 
-    --node-start: #1c6dd0;   --node-start-tint: rgba(28,109,208,0.12);
-    --node-opcao: #e85d04;   --node-opcao-tint: rgba(232,93,4,0.12);
-    --node-fila: #1c8a4b;    --node-fila-tint: rgba(28,138,75,0.12);
-    --node-horario: #7b3fe4; --node-horario-tint: rgba(123,63,228,0.12);
+    --node-start: #1c6dd0;    --node-start-tint: rgba(28,109,208,0.12);
+    --node-opcao: #e85d04;    --node-opcao-tint: rgba(232,93,4,0.12);
+    --node-fila: #1c8a4b;     --node-fila-tint: rgba(28,138,75,0.12);
+    --node-horario: #7b3fe4;  --node-horario-tint: rgba(123,63,228,0.12);
+    --node-mensagem: #0e7490; --node-mensagem-tint: rgba(14,116,144,0.12);
+    --node-aguardar: #64748b; --node-aguardar-tint: rgba(100,116,139,0.12);
 
     --edge-color: #8296ad;
     --canvas-dot: #d3dbe3;
@@ -55,16 +60,18 @@
     --shadow-strong: 0 14px 32px rgba(0,0,0,0.55);
     --scrollbar-thumb: #46536a;
 
-    --node-start: #4d8ff0;   --node-start-tint: rgba(77,143,240,0.18);
-    --node-opcao: #ff8a3d;   --node-opcao-tint: rgba(255,138,61,0.16);
-    --node-fila: #2fa86a;    --node-fila-tint: rgba(47,168,106,0.18);
-    --node-horario: #9b6ff0; --node-horario-tint: rgba(155,111,240,0.18);
+    --node-start: #4d8ff0;    --node-start-tint: rgba(77,143,240,0.18);
+    --node-opcao: #ff8a3d;    --node-opcao-tint: rgba(255,138,61,0.16);
+    --node-fila: #2fa86a;     --node-fila-tint: rgba(47,168,106,0.18);
+    --node-horario: #9b6ff0;  --node-horario-tint: rgba(155,111,240,0.18);
+    --node-mensagem: #22b8cf; --node-mensagem-tint: rgba(34,184,207,0.16);
+    --node-aguardar: #94a3b8; --node-aguardar-tint: rgba(148,163,184,0.16);
 
     --edge-color: #5b6b82;
     --canvas-dot: #26303f;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-body); }
 .hidden { display: none !important; }
 
 html, body { height: 100%; }
@@ -109,7 +116,7 @@ button:focus-visible, a:focus-visible, [draggable]:focus-visible {
     flex-shrink: 0;
 }
 .fc-back-link:hover { background: var(--surface-hover); border-color: var(--border-color-strong); }
-.fc-title-block h1 { font-size: 15px; font-weight: 700; color: var(--primary-blue); line-height: 1.2; white-space: nowrap; }
+.fc-title-block h1 { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--primary-blue); line-height: 1.2; white-space: nowrap; }
 .fc-autosave { font-size: 11px; color: var(--text-muted); }
 
 .fc-topbar-right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -304,6 +311,37 @@ button:focus-visible, a:focus-visible, [draggable]:focus-visible {
 .node-header .node-hicon { color: var(--action-orange); font-size: 16px; line-height: 1; }
 .node-header .node-htitle { font-size: 14px; font-weight: 700; color: var(--text-dark); }
 
+/* Cor por tipo de bloco — cada card usa a cor "designada" ao seu papel no fluxo,
+   pra ficar reconhecível de longe sem precisar ler o título (mesma lógica das
+   fila-tints já usadas na paleta lateral) */
+#drawflow .drawflow-node.node-inicio     .node-header { background: var(--node-start-tint);    border-bottom-color: var(--node-start); }
+#drawflow .drawflow-node.node-mensagem   .node-header { background: var(--node-mensagem-tint); border-bottom-color: var(--node-mensagem); }
+#drawflow .drawflow-node.node-entrada    .node-header { background: var(--warning-tint);        border-bottom-color: var(--warning); }
+#drawflow .drawflow-node.node-menu       .node-header { background: var(--node-opcao-tint);     border-bottom-color: var(--node-opcao); }
+#drawflow .drawflow-node.node-condicao   .node-header { background: var(--node-horario-tint);   border-bottom-color: var(--node-horario); }
+#drawflow .drawflow-node.node-aguardar   .node-header { background: var(--node-aguardar-tint);  border-bottom-color: var(--node-aguardar); }
+#drawflow .drawflow-node.node-transferir .node-header { background: var(--node-fila-tint);      border-bottom-color: var(--node-fila); }
+#drawflow .drawflow-node.node-encerrar   .node-header { background: var(--danger-tint);          border-bottom-color: var(--danger); }
+
+#drawflow .drawflow-node.node-inicio     .node-hicon { color: var(--node-start); }
+#drawflow .drawflow-node.node-mensagem   .node-hicon { color: var(--node-mensagem); }
+#drawflow .drawflow-node.node-entrada    .node-hicon { color: var(--warning); }
+#drawflow .drawflow-node.node-menu       .node-hicon { color: var(--node-opcao); }
+#drawflow .drawflow-node.node-condicao   .node-hicon { color: var(--node-horario); }
+#drawflow .drawflow-node.node-aguardar   .node-hicon { color: var(--node-aguardar); }
+#drawflow .drawflow-node.node-transferir .node-hicon { color: var(--node-fila); }
+#drawflow .drawflow-node.node-encerrar   .node-hicon { color: var(--danger); }
+
+/* Anel de seleção acompanha a cor do tipo, em vez de ser sempre laranja */
+#drawflow .drawflow-node.node-inicio.selected     { border-color: var(--node-start);    box-shadow: 0 0 0 3px var(--node-start-tint), var(--shadow-strong); }
+#drawflow .drawflow-node.node-mensagem.selected   { border-color: var(--node-mensagem); box-shadow: 0 0 0 3px var(--node-mensagem-tint), var(--shadow-strong); }
+#drawflow .drawflow-node.node-entrada.selected    { border-color: var(--warning);        box-shadow: 0 0 0 3px var(--warning-tint), var(--shadow-strong); }
+#drawflow .drawflow-node.node-menu.selected       { border-color: var(--node-opcao);     box-shadow: 0 0 0 3px var(--node-opcao-tint), var(--shadow-strong); }
+#drawflow .drawflow-node.node-condicao.selected   { border-color: var(--node-horario);   box-shadow: 0 0 0 3px var(--node-horario-tint), var(--shadow-strong); }
+#drawflow .drawflow-node.node-aguardar.selected   { border-color: var(--node-aguardar);  box-shadow: 0 0 0 3px var(--node-aguardar-tint), var(--shadow-strong); }
+#drawflow .drawflow-node.node-transferir.selected { border-color: var(--node-fila);      box-shadow: 0 0 0 3px var(--node-fila-tint), var(--shadow-strong); }
+#drawflow .drawflow-node.node-encerrar.selected   { border-color: var(--danger);          box-shadow: 0 0 0 3px var(--danger-tint), var(--shadow-strong); }
+
 .node-body { padding: 12px 14px; font-size: 12.5px; }
 .node-body p { margin: 2px 0; line-height: 1.5; color: var(--text-muted); }
 .node-body strong { color: var(--text-dark); }
@@ -322,8 +360,20 @@ button:focus-visible, a:focus-visible, [draggable]:focus-visible {
     font-family: inherit;
 }
 .node-body textarea { resize: vertical; min-height: 56px; }
+.node-body textarea:hover, .node-body input:hover, .node-body select:hover { border-color: var(--border-color-strong); }
 .node-body textarea:focus, .node-body input:focus, .node-body select:focus {
     outline: none; border-color: var(--action-orange);
+}
+/* Select nativo: seta customizada em vez da seta padrão do SO */
+.node-body select {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    background-size: 9px 6px;
 }
 
 /* ---------- Portas: bolinhas laranjas sólidas (posição controlada por nós) ---------- */
@@ -442,14 +492,11 @@ button:focus-visible, a:focus-visible, [draggable]:focus-visible {
 #drawflow .connection .main-path:hover { stroke: var(--action-orange); }
 #drawflow .drawflow .connection .point { stroke: var(--action-orange); fill: var(--surface); }
 
-/* Botão nativo de exclusão do Drawflow (aparece ao selecionar) */
+/* Botão nativo de exclusão do Drawflow: escondido a pedido (bolinha desnecessária
+   sobre o card) — o bloco selecionado ainda pode ser removido com Delete/Backspace,
+   que o Drawflow trata nativamente sem precisar deste botão. */
 #drawflow .drawflow-delete {
-    background: var(--danger);
-    border: 2px solid var(--surface);
-    color: var(--white);
-    border-radius: 50%;
-    font-family: inherit;
-    line-height: 24px;
+    display: none;
 }
 
 /* ================= Paleta flutuante de ações ================= */
@@ -483,6 +530,15 @@ button:focus-visible, a:focus-visible, [draggable]:focus-visible {
 .fc-action:active { cursor: grabbing; }
 .fc-action-icon { color: var(--action-orange); font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
 .fc-action-label { flex: 1; }
+
+/* Ícones do menu flutuante seguem a mesma cor por tipo dos cards no quadro */
+.fc-action[data-node-type="mensagem"]   .fc-action-icon { color: var(--node-mensagem); }
+.fc-action[data-node-type="entrada"]    .fc-action-icon { color: var(--warning); }
+.fc-action[data-node-type="menu"]       .fc-action-icon { color: var(--node-opcao); }
+.fc-action[data-node-type="condicao"]   .fc-action-icon { color: var(--node-horario); }
+.fc-action[data-node-type="aguardar"]   .fc-action-icon { color: var(--node-aguardar); }
+.fc-action[data-node-type="transferir"] .fc-action-icon { color: var(--node-fila); }
+.fc-action[data-node-type="encerrar"]   .fc-action-icon { color: var(--danger); }
 
 /* ================= Barra de zoom vertical ================= */
 .fc-zoombar {
