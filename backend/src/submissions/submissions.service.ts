@@ -28,16 +28,16 @@ export class SubmissionsService {
   }
 
   /**
-   * "current": o rascunho mais recente ainda não enviado.
+   * "current": o rascunho mais recente ainda não enviado *daquele sessionId*.
    * Se não existir, cria um vazio — assim o frontend sempre tem onde salvar.
+   * Sem sessionId (clientes antigos), cai no rascunho global mais recente, mantendo
+   * compatibilidade com o comportamento anterior.
    */
-  async findOrCreateCurrent(): Promise<Submission> {
-    const current = await this.repo.findOne({
-      where: { status: 'rascunho' },
-      order: { updatedAt: 'DESC' },
-    });
+  async findOrCreateCurrent(sessionId?: string): Promise<Submission> {
+    const where = sessionId ? { status: 'rascunho' as const, sessionId } : { status: 'rascunho' as const };
+    const current = await this.repo.findOne({ where, order: { updatedAt: 'DESC' } });
     if (current) return current;
-    return this.repo.save(this.repo.create({}));
+    return this.repo.save(this.repo.create({ sessionId: sessionId ?? null }));
   }
 
   async update(id: string, dto: UpdateSubmissionDto): Promise<Submission> {

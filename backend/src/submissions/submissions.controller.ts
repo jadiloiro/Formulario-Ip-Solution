@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { SubmissionsService } from './submissions.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
@@ -31,10 +32,12 @@ export class SubmissionsController {
     return this.service.findAll();
   }
 
-  /** Rascunho atual: o frontend usa este endpoint como "sessão" de trabalho */
+  /** Rascunho atual: o frontend usa este endpoint como "sessão" de trabalho.
+   *  sessionId identifica o navegador (gerado no frontend) para que atendentes
+   *  simultâneos não caiam no mesmo rascunho. */
   @Get('current')
-  current() {
-    return this.service.findOrCreateCurrent();
+  current(@Query('sessionId') sessionId?: string) {
+    return this.service.findOrCreateCurrent(sessionId);
   }
 
   @Get(':id')

@@ -21,6 +21,11 @@ export class Submission {
   @Column({ default: 'Cliente sem nome' })
   clientName: string;
 
+  /** Identificador gerado pelo navegador (localStorage) — isola o "current" de cada
+   *  atendente para que sessões simultâneas não sobrescrevam o rascunho umas das outras. */
+  @Column({ type: 'varchar', nullable: true })
+  sessionId: string | null;
+
   /** JSON serializado do formulário (mesma estrutura do rascunho do frontend) */
   @Column({ type: 'simple-json', nullable: true })
   formData: Record<string, unknown> | null;
