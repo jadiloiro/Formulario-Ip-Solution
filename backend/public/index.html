@@ -470,15 +470,35 @@
                 </div>
                 <div class="form-group">
                     <label for="numeroPrincipal">Qual será o número principal? (Ex: 11 99999-9999)</label>
-                    <input id="numeroPrincipal" type="text" class="form-control" placeholder="Número com DDD" inputmode="tel" autocomplete="tel-national">
+                    <div class="input-icon-wrap">
+                        <i class="fa-brands fa-whatsapp input-icon input-icon-wa"></i>
+                        <input id="numeroPrincipal" type="text" class="form-control has-icon" placeholder="Número com DDD" inputmode="tel" autocomplete="tel-national">
+                    </div>
                 </div>
                 <fieldset class="form-group radio-fieldset">
-                    <legend>Este número pertence a uma URA (PABX)?</legend>
+                    <legend>Esse número já está ativo (em uso hoje)?</legend>
+                    <p class="field-hint field-hint-lead">Se o número ainda não foi liberado pela operadora ou está sendo portado, marque "Não".</p>
                     <div class="radio-group">
-                        <label><input type="radio" name="ura" value="sim"> Sim</label>
-                        <label><input type="radio" name="ura" value="nao" checked> Não</label>
+                        <label class="cfg4-radio"><input type="radio" name="numeroAtivo" value="sim" checked> <span>Sim, já está ativo</span></label>
+                        <label class="cfg4-radio"><input type="radio" name="numeroAtivo" value="nao"> <span>Não, ainda não está ativo</span></label>
                     </div>
                 </fieldset>
+                <fieldset class="form-group radio-fieldset">
+                    <legend>Este número pertence a uma URA (PABX)?</legend>
+                    <p class="field-hint field-hint-lead">URA é aquele menu automático ("disque 1 para...") que atende antes de passar para uma pessoa. Se seu número já tem isso hoje, marque "Sim".</p>
+                    <div class="radio-group">
+                        <label class="cfg4-radio"><input type="radio" name="ura" value="sim"> <span>Sim</span></label>
+                        <label class="cfg4-radio"><input type="radio" name="ura" value="nao" checked> <span>Não</span></label>
+                    </div>
+                </fieldset>
+                <div class="form-group hidden" id="uraResponsavelWrap">
+                    <label for="uraResponsavel">Contato do responsável pela URA</label>
+                    <p class="field-hint field-hint-lead">Nome e telefone de quem podemos acionar caso seja preciso mexer na configuração da URA.</p>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-user input-icon"></i>
+                        <input id="uraResponsavel" type="text" class="form-control has-icon" placeholder="Ex: João Silva — (11) 98888-7777">
+                    </div>
+                </div>
             </div>
 
             <!-- STEP 6: AGENDA -->
@@ -491,7 +511,17 @@
                 </div>
                 <div class="form-group">
                     <label>Anexe seu arquivo CSV de contatos:</label>
-                    <input type="file" class="form-control" accept=".csv">
+                    <label class="csv-dropzone" id="csvDropzone" for="agendaCsvInput">
+                        <span class="csv-dropzone-icon"><i class="fa-solid fa-file-csv"></i></span>
+                        <span class="csv-dropzone-text">Arraste o arquivo aqui ou <strong>clique para escolher</strong></span>
+                        <span class="csv-dropzone-hint">Formato aceito: .csv</span>
+                        <input type="file" id="agendaCsvInput" class="csv-dropzone-input" accept=".csv">
+                    </label>
+                    <div class="csv-file-chip hidden" id="csvFileChip">
+                        <span class="csv-file-icon"><i class="fa-solid fa-file-csv"></i></span>
+                        <span class="csv-file-name" id="csvFileName"></span>
+                        <button type="button" class="csv-file-remove" id="csvFileRemove" aria-label="Remover arquivo anexado">×</button>
+                    </div>
                 </div>
             </div>
 

@@ -293,6 +293,56 @@ function addAttachments(step, fileList) {
     showToast(`${fileList.length} arquivo(s) anexado(s) a esta etapa.`, 'success');
 }
 
+/* ========================= Etapa 6: dropzone do CSV de contatos ========================= */
+function showCsvFile(name) {
+    const chip = document.getElementById('csvFileChip');
+    const label = document.getElementById('csvFileName');
+    if (!chip || !label) return;
+    label.textContent = name;
+    label.title = name;
+    chip.classList.remove('hidden');
+}
+
+function clearCsvFile() {
+    const input = document.getElementById('agendaCsvInput');
+    const chip = document.getElementById('csvFileChip');
+    const label = document.getElementById('csvFileName');
+    if (input) input.value = '';
+    if (label) label.textContent = '';
+    if (chip) chip.classList.add('hidden');
+    scheduleDraftSave();
+}
+
+function setupCsvDropzone() {
+    const zone = document.getElementById('csvDropzone');
+    const input = document.getElementById('agendaCsvInput');
+    const removeBtn = document.getElementById('csvFileRemove');
+    if (!zone || !input) return;
+
+    input.addEventListener('change', () => {
+        if (input.files.length > 0) {
+            showCsvFile(input.files[0].name);
+            scheduleDraftSave();
+        }
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => {
+        zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(evt => {
+        zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.remove('dragover'); });
+    });
+    zone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files.length > 0) {
+            input.files = e.dataTransfer.files;
+            showCsvFile(input.files[0].name);
+            scheduleDraftSave();
+        }
+    });
+
+    if (removeBtn) removeBtn.addEventListener('click', (e) => { e.preventDefault(); clearCsvFile(); });
+}
+
 function updateProgress(step) {
     const done = completedSteps.size;
     const pct = Math.round((done / totalSteps) * 100);
@@ -1329,7 +1379,13 @@ function collectDraft() {
         },
         numeros: {
             principal: (document.getElementById('numeroPrincipal') || {}).value || '',
-            ura: getRadio('ura')
+            ativo: getRadio('numeroAtivo'),
+            ura: getRadio('ura'),
+            uraResponsavel: (document.getElementById('uraResponsavel') || {}).value || ''
+        },
+        agenda: {
+            // O navegador não permite restaurar o arquivo em si (só o nome fica salvo no rascunho)
+            csvNome: (document.getElementById('csvFileName') || {}).textContent || ''
         },
         // O fluxo do BOT é editado visualmente no Passo 7 (motor Drawflow) e persistido
         // em localStorage pelo próprio editor — lemos daqui para o PDF refletir o que
@@ -1359,76 +1415,170 @@ function gerarDocumentoLevantamento(draft) {
 
         const AZUL   = [0, 43, 94];      // #002b5e
         const LARANJA = [232, 93, 4];    // #e85d04
-        const CINZA  = [80, 80, 80];
-        const BGCINZA = [245, 247, 250];
-        const W = 210, MARGIN = 15, CONTENT = W - MARGIN * 2;
+        const VERDE  = [28, 138, 75];    // wa-green-dark — reservado para o que "vira WhatsApp de verdade"
+        const CINZA  = [90, 90, 90];
+        const CINZA_CLARO = [150, 150, 150];
+        const BGCINZA = [246, 248, 250];
+        const W = 210, MARGIN = 16, CONTENT = W - MARGIN * 2;
         let y = 0;
 
         /* ── helpers ── */
+        // Formato explícito sempre 'a4'/'portrait' — não depende do que addPage() assume
+        // como padrão quando chamado sem argumentos (a página do diagrama do fluxo, mais
+        // adiante, é paisagem, e isso não pode "vazar" para as páginas seguintes).
         function addPage() {
-            doc.addPage();
-            y = 20;
-            // rodapé com número de página
+            doc.addPage('a4', 'portrait');
+            y = 22;
+        }
+
+        // Numeração de página é aplicada uma única vez no final (evita re-percorrer páginas a cada addPage).
+        // Usa as dimensões REAIS de cada página (a página do diagrama do fluxo é paisagem, mais larga).
+        function paginate() {
             const total = doc.getNumberOfPages();
             for (let p = 1; p <= total; p++) {
                 doc.setPage(p);
-                doc.setFontSize(8);
-                doc.setTextColor(160, 160, 160);
-                doc.text(`Levantamento IP Solution  •  Página ${p} de ${total}`, W / 2, 290, { align: 'center' });
+                if (p === 1) continue; // capa não recebe numeração
+                const pw = doc.internal.pageSize.getWidth();
+                const ph = doc.internal.pageSize.getHeight();
+                doc.setDrawColor(225, 228, 232);
+                doc.setLineWidth(0.2);
+                doc.line(MARGIN, ph - 11, pw - MARGIN, ph - 11);
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...CINZA_CLARO);
+                doc.text('Levantamento de Onboarding · IP Solution', MARGIN, ph - 6);
+                doc.text(`Página ${p} de ${total}`, pw - MARGIN, ph - 6, { align: 'right' });
             }
-            doc.setPage(total);
         }
 
         function ensureSpace(needed) {
-            if (y + needed > 275) addPage();
+            if (y + needed > 274) addPage();
         }
 
-        function sectionTitle(title) {
-            ensureSpace(14);
+        // Sumário clicável: cada seção se auto-registra aqui com a página em que caiu,
+        // renderizado no final na página reservada logo após a capa (ver tocPageNum)
+        const tocEntries = [];
+
+        function sectionTitle(title, tocLabel) {
+            ensureSpace(19);
             doc.setFillColor(...AZUL);
-            doc.rect(MARGIN, y, CONTENT, 8, 'F');
-            doc.setFontSize(10);
+            doc.roundedRect(MARGIN, y, CONTENT, 12, 1.4, 1.4, 'F');
+            // aceno laranja: reforça o par de cores da marca em cada título de seção
+            doc.setFillColor(...LARANJA);
+            doc.rect(MARGIN, y, 2.8, 12, 'F');
+            doc.setFontSize(13);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(255, 255, 255);
-            doc.text(title, MARGIN + 3, y + 5.5);
-            y += 10;
+            doc.text(title, MARGIN + 7, y + 8);
+            if (tocLabel !== false) tocEntries.push({ label: tocLabel || title, page: doc.getNumberOfPages() });
+            y += 17;
             doc.setTextColor(...CINZA);
         }
 
+        // Campo em bloco (rótulo em cima, valor maior embaixo) — mais fácil de ler
+        // que duas colunas apertadas, e acomoda rótulos longos sem cortar texto.
         function field(label, value) {
             if (!value && value !== 0) return;
             const valStr = String(value).trim();
             if (!valStr) return;
-            ensureSpace(12);
-            doc.setFontSize(8.5);
+            doc.setFontSize(11);
+            const lines = doc.splitTextToSize(valStr, CONTENT);
+            ensureSpace(6.5 + lines.length * 5.6 + 4);
+            doc.setFontSize(9);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...AZUL);
-            doc.text(label + ':', MARGIN, y);
+            doc.setTextColor(...LARANJA);
+            doc.text(label.toUpperCase(), MARGIN, y);
+            y += 5.5;
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...CINZA);
-            const lines = doc.splitTextToSize(valStr, CONTENT - 45);
-            doc.text(lines, MARGIN + 45, y);
-            y += Math.max(6, lines.length * 5);
+            doc.setTextColor(...AZUL);
+            doc.text(lines, MARGIN, y);
+            y += lines.length * 5.6 + 5;
         }
 
         function msgBlock(titulo, texto) {
             if (!texto) return;
-            ensureSpace(16);
-            doc.setFontSize(8.5);
+            doc.setFontSize(9.5);
+            const lines = doc.splitTextToSize(texto, CONTENT - 12);
+            const bh = lines.length * 5.2 + 8;
+            ensureSpace(bh + 10);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...AZUL);
-            doc.text(titulo + ':', MARGIN, y);
-            y += 5;
+            doc.setTextColor(...LARANJA);
+            doc.text(titulo.toUpperCase(), MARGIN, y);
+            y += 6;
             doc.setFillColor(...BGCINZA);
-            const lines = doc.splitTextToSize(texto, CONTENT - 4);
-            const bh = lines.length * 4.5 + 5;
-            doc.rect(MARGIN, y, CONTENT, bh, 'F');
+            doc.roundedRect(MARGIN, y, CONTENT, bh, 2, 2, 'F');
+            // borda esquerda colorida — mesma linguagem visual usada nos blocos do editor de fluxo
+            doc.setFillColor(...VERDE);
+            doc.roundedRect(MARGIN, y, 2, bh, 1, 1, 'F');
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...CINZA);
-            doc.setFontSize(8);
-            doc.text(lines, MARGIN + 2, y + 4);
-            y += bh + 4;
+            doc.setFontSize(9.5);
+            doc.text(lines, MARGIN + 6, y + 5.5);
+            y += bh + 6;
         }
+
+        /* ── Dados hoisted: usados na capa (estatísticas rápidas) e na Etapa 7 (diagrama) ── */
+        const filas = draft.filas || [];
+        const agentes = draft.agentes || [];
+        const bot = draft.bot || {};
+
+        // Mesma paleta de cores usada no editor visual do fluxo (Flowchart.css),
+        // pra quem já mexeu no editor reconhecer os blocos de cara no PDF.
+        const FLOW_LABELS = {
+            inicio: 'Início', mensagem: 'Mensagem', entrada: 'Entrada', menu: 'Menu',
+            condicao: 'Condição de horário', aguardar: 'Aguardar',
+            transferir: 'Transferir', encerrar: 'Encerrar atendimento'
+        };
+        const FLOW_COLORS = {
+            inicio: [28, 109, 208], mensagem: [14, 116, 144], entrada: [180, 83, 9], menu: [232, 93, 4],
+            condicao: [123, 63, 228], aguardar: [100, 116, 139], transferir: [28, 138, 75], encerrar: [220, 53, 69]
+        };
+        // Rótulo curto: usado só dentro das caixas do diagrama (estreitas, sem espaço pro nome completo)
+        const FLOW_LABELS_SHORT = {
+            inicio: 'Início', mensagem: 'Mensagem', entrada: 'Entrada', menu: 'Menu',
+            condicao: 'Condição', aguardar: 'Aguardar', transferir: 'Transferir', encerrar: 'Encerrar'
+        };
+
+        function flowShortText(n) {
+            const d = n.data || {};
+            const trunc = (s, len) => (s && s.length > len) ? s.slice(0, len - 1).trim() + '…' : (s || '');
+            switch (n.name) {
+                case 'mensagem': return trunc(d.texto, 60);
+                case 'entrada': return trunc(d.pergunta, 60);
+                case 'menu': return trunc(d.texto, 60);
+                case 'aguardar': return `${d.minutos || '?'} minutos`;
+                case 'transferir': return `Fila: ${d.fila || '(não definida)'}`;
+                default: return '';
+            }
+        }
+
+        // Todas as conexões que SAEM de um bloco, já com o rótulo da aresta quando existir
+        // (a opção escolhida no Menu, ou dentro/fora do horário na Condição)
+        function flowEdges(n) {
+            const edges = [];
+            if (!n.outputs) return edges;
+            Object.keys(n.outputs).sort().forEach(outKey => {
+                const idx = parseInt(outKey.replace('output_', ''), 10) - 1;
+                let label = '';
+                if (n.name === 'menu') label = (n.data.options || [])[idx] || `Opção ${idx + 1}`;
+                else if (n.name === 'condicao') label = idx === 0 ? 'Dentro do horário' : 'Fora do horário';
+                ((n.outputs[outKey] && n.outputs[outKey].connections) || []).forEach(c => {
+                    edges.push({ toId: String(c.node), label });
+                });
+            });
+            return edges;
+        }
+
+        let flowGraph = null;
+        try {
+            const parsedBot = typeof bot.fluxoJson === 'string' ? JSON.parse(bot.fluxoJson) : bot.fluxoJson;
+            const data = parsedBot && parsedBot.drawflow && parsedBot.drawflow.Home && parsedBot.drawflow.Home.data;
+            if (data && Object.keys(data).length) flowGraph = data;
+        } catch (_) { /* JSON inválido — trata como fluxo vazio */ }
+        const flowNodes = flowGraph ? Object.values(flowGraph) : [];
+        const flowById = {};
+        flowNodes.forEach(n => { flowById[String(n.id)] = n; });
 
         /* ═══════════════════════════════════════════════
            CAPA
@@ -1457,39 +1607,64 @@ function gerarDocumentoLevantamento(draft) {
         doc.setTextColor(180, 180, 180);
         doc.text('Gerado em: ' + dataStr, W / 2, 50, { align: 'center' });
 
-        y = 70;
+        // Tira de estatísticas rápidas: primeira impressão de "o que tem aqui dentro"
+        const stats = [
+            { n: filas.length, label: 'fila' + (filas.length === 1 ? '' : 's') },
+            { n: agentes.length, label: 'agente' + (agentes.length === 1 ? '' : 's') },
+            { n: flowNodes.length, label: 'bloco' + (flowNodes.length === 1 ? '' : 's') + ' no fluxo' }
+        ];
+        const statW = CONTENT / stats.length;
+        stats.forEach((s, i) => {
+            const cx = MARGIN + statW * i + statW / 2;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(...AZUL);
+            doc.text(String(s.n), cx, 68, { align: 'center' });
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...CINZA_CLARO);
+            doc.text(s.label, cx, 74, { align: 'center' });
+            if (i > 0) {
+                doc.setDrawColor(225, 228, 232); doc.setLineWidth(0.2);
+                doc.line(MARGIN + statW * i, 60, MARGIN + statW * i, 74);
+            }
+        });
+        doc.setDrawColor(225, 228, 232); doc.setLineWidth(0.2);
+        doc.line(MARGIN, 80, W - MARGIN, 80);
+
+        /* ═══════════════════════════════════════════════
+           SUMÁRIO — reservado aqui, preenchido no final (já sabendo a página de
+           cada seção) e com links clicáveis pra pular direto pra ela no leitor de PDF
+        ═══════════════════════════════════════════════ */
+        doc.addPage('a4', 'portrait');
+        const tocPageNum = doc.getNumberOfPages();
+        y = 22;
 
         /* ═══════════════════════════════════════════════
            PASSO 1 – FILAS
         ═══════════════════════════════════════════════ */
-        const filas = draft.filas || [];
         sectionTitle('1. Filas de Atendimento');
         if (filas.length === 0) {
-            doc.setFontSize(8.5); doc.setTextColor(...CINZA);
-            doc.text('Nenhuma fila cadastrada.', MARGIN, y); y += 7;
+            doc.setFontSize(10.5); doc.setTextColor(...CINZA);
+            doc.text('Nenhuma fila cadastrada.', MARGIN, y); y += 8;
         } else {
             doc.autoTable({
                 startY: y,
                 margin: { left: MARGIN, right: MARGIN },
                 head: [['#', 'Nome da Fila', 'Descrição']],
                 body: filas.map((f, i) => [i + 1, f.nome || '—', f.descricao || '—']),
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 9.5, cellPadding: 3 },
+                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold', fontSize: 10 },
                 alternateRowStyles: { fillColor: BGCINZA },
                 theme: 'grid'
             });
-            y = doc.lastAutoTable.finalY + 6;
+            y = doc.lastAutoTable.finalY + 8;
         }
 
         /* ═══════════════════════════════════════════════
            PASSO 2 – AGENTES
         ═══════════════════════════════════════════════ */
-        const agentes = draft.agentes || [];
-        ensureSpace(20);
+        ensureSpace(22);
         sectionTitle('2. Agentes');
         if (agentes.length === 0) {
-            doc.setFontSize(8.5); doc.setTextColor(...CINZA);
-            doc.text('Nenhum agente cadastrado.', MARGIN, y); y += 7;
+            doc.setFontSize(10.5); doc.setTextColor(...CINZA);
+            doc.text('Nenhum agente cadastrado.', MARGIN, y); y += 8;
         } else {
             doc.autoTable({
                 startY: y,
@@ -1502,13 +1677,13 @@ function gerarDocumentoLevantamento(draft) {
                     a.perfil || '—',
                     (a.filas || []).join(', ') || '—'
                 ]),
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 9.5, cellPadding: 3 },
+                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold', fontSize: 10 },
                 alternateRowStyles: { fillColor: BGCINZA },
                 theme: 'grid',
-                columnStyles: { 4: { cellWidth: 50 } }
+                columnStyles: { 4: { cellWidth: 48 } }
             });
-            y = doc.lastAutoTable.finalY + 6;
+            y = doc.lastAutoTable.finalY + 8;
         }
 
         /* ═══════════════════════════════════════════════
@@ -1530,8 +1705,8 @@ function gerarDocumentoLevantamento(draft) {
         const cfg = draft.configuracoes || {};
 
         // Sub 1: Tempo no BOT
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
-        ensureSpace(7); doc.text('■ Cliente parado no menu do BOT', MARGIN, y); y += 5;
+        doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+        ensureSpace(9); doc.text('■ Cliente parado no menu do BOT', MARGIN, y); y += 6.5;
         doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
         field('Tempo de espera',
             cfg.tempoBot === 'alterar'
@@ -1543,8 +1718,8 @@ function gerarDocumentoLevantamento(draft) {
                 : 'Encerrar o atendimento');
 
         // Sub 2: Abandono
-        ensureSpace(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
-        doc.text('■ Abandono de conversa', MARGIN, y); y += 5;
+        doc.setFontSize(11); ensureSpace(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+        doc.text('■ Abandono de conversa', MARGIN, y); y += 6.5;
         doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
         const semInt = cfg.semInteracao;
         field('Tempo para encerramento',
@@ -1553,8 +1728,8 @@ function gerarDocumentoLevantamento(draft) {
         msgBlock('Mensagem de encerramento por falta de resposta', cfg.msgSemInteracao);
 
         // Sub 3: Tentativas
-        ensureSpace(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
-        doc.text('■ Erros de menu', MARGIN, y); y += 5;
+        doc.setFontSize(11); ensureSpace(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+        doc.text('■ Erros de menu', MARGIN, y); y += 6.5;
         doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
         field('Limite de tentativas',
             cfg.tentativasMode === 'alterar'
@@ -1564,8 +1739,8 @@ function gerarDocumentoLevantamento(draft) {
         msgBlock('Mensagem de tentativas excedidas', cfg.msgTentativas);
 
         // Sub 4: Mensagens automáticas
-        ensureSpace(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
-        doc.text('■ Mensagens automáticas', MARGIN, y); y += 6;
+        doc.setFontSize(11); ensureSpace(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+        doc.text('■ Mensagens automáticas', MARGIN, y); y += 7;
         doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
         const mensagens = [
             { id: 'saudacaoAgente',  label: 'Saudação do agente' },
@@ -1588,15 +1763,15 @@ function gerarDocumentoLevantamento(draft) {
         // Sub 5: Respostas rápidas
         const respostas = cfg.respostas || [];
         if (respostas.length > 0) {
-            ensureSpace(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
-            doc.text('■ Respostas rápidas', MARGIN, y); y += 5;
+            doc.setFontSize(11); ensureSpace(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+            doc.text('■ Respostas rápidas', MARGIN, y); y += 6.5;
             doc.autoTable({
                 startY: y,
                 margin: { left: MARGIN, right: MARGIN },
                 head: [['Título', 'Mensagem']],
                 body: respostas.map(r => [r.titulo || '—', r.mensagem || '—']),
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 9.5, cellPadding: 3 },
+                headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold', fontSize: 10 },
                 alternateRowStyles: { fillColor: BGCINZA },
                 theme: 'grid'
             });
@@ -1610,7 +1785,9 @@ function gerarDocumentoLevantamento(draft) {
         sectionTitle('5. Números WhatsApp');
         const nums = draft.numeros || {};
         field('Número principal', nums.principal || '—');
+        field('Número já está ativo', nums.ativo === 'nao' ? 'Não' : 'Sim');
         field('URA (Unidade de Resposta Audível)', nums.ura === 'sim' ? 'Sim' : 'Não');
+        if (nums.ura === 'sim') field('Contato do responsável pela URA', nums.uraResponsavel || 'Não informado');
 
         /* ═══════════════════════════════════════════════
            PASSO 6 – AGENDA / CONTATOS
@@ -1622,38 +1799,203 @@ function gerarDocumentoLevantamento(draft) {
         field('Total de registros', agenda.csvTotal != null ? String(agenda.csvTotal) : '—');
 
         /* ═══════════════════════════════════════════════
-           PASSO 7 – FLUXO BOT
+           PASSO 7 – FLUXO DO BOT (diagrama + explicação de cada caminho)
         ═══════════════════════════════════════════════ */
         ensureSpace(14);
         sectionTitle('7. Fluxo do BOT');
-        const bot = draft.bot || {};
-        if (bot.resumoFluxo && bot.resumoFluxo.trim()) {
-            field('Blocos no fluxo', String(bot.totalBlocos || 0));
-            msgBlock('Resumo do fluxo montado no editor visual', bot.resumoFluxo);
-        } else if (bot.fluxoJson) {
-            // Fallback: rascunho antigo salvo antes desta versão, sem resumo pronto
-            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
-            doc.text('Fluxo configurado no editor visual (exportado em JSON).', MARGIN, y); y += 5;
-            try {
-                const parsed = typeof bot.fluxoJson === 'string' ? JSON.parse(bot.fluxoJson) : bot.fluxoJson;
-                const nos = Object.keys(parsed.drawflow?.Home?.data || {});
-                field('Número de nós no fluxo', String(nos.length));
-            } catch (_) { /* JSON inválido, ignora */ }
+
+        if (!flowGraph) {
+            doc.setFontSize(10.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+            doc.text('Fluxo do BOT ainda não configurado no editor visual.', MARGIN, y); y += 7;
         } else {
-            doc.setFontSize(8.5); doc.setTextColor(...CINZA);
-            doc.text('Fluxo BOT não configurado.', MARGIN, y); y += 5;
+            const nodes = flowNodes;
+            const byId = flowById;
+            const inicio = nodes.find(n => n.name === 'inicio');
+
+            field('Total de blocos no fluxo', String(nodes.length));
+            doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+            const introLines = doc.splitTextToSize(
+                'O diagrama a seguir mostra os blocos montados no editor visual e como eles se conectam. Depois dele, cada caminho possível — da mensagem inicial até o fim do atendimento — é descrito em texto.',
+                CONTENT
+            );
+            ensureSpace(introLines.length * 5 + 5);
+            doc.text(introLines, MARGIN, y);
+            y += introLines.length * 5 + 5;
+
+            /* ---------- Camadas (distância a partir do Início) para posicionar o diagrama ---------- */
+            const level = {};
+            if (inicio) {
+                const startId = String(inicio.id);
+                level[startId] = 0;
+                const queue = [startId];
+                while (queue.length) {
+                    const id = queue.shift();
+                    const n = byId[id];
+                    if (!n) continue;
+                    flowEdges(n).forEach(e => {
+                        if (!(e.toId in level) && byId[e.toId]) {
+                            level[e.toId] = level[id] + 1;
+                            queue.push(e.toId);
+                        }
+                    });
+                }
+            }
+            // Blocos que o Início não alcança (sem conexão) ainda entram no diagrama, numa
+            // coluna extra — melhor mostrar tudo o que o cliente montou do que esconder algo.
+            let maxLevel = nodes.reduce((m, n) => Math.max(m, level[String(n.id)] || 0), 0);
+            nodes.forEach(n => { if (!(String(n.id) in level)) level[String(n.id)] = maxLevel + 1; });
+            maxLevel = nodes.reduce((m, n) => Math.max(m, level[String(n.id)] || 0), 0);
+
+            /* ---------- Página paisagem dedicada ao diagrama (mais espaço horizontal) ---------- */
+            doc.addPage('a4', 'landscape');
+            y = 20;
+            const LW = doc.internal.pageSize.getWidth();
+            const LMARGIN = 16;
+            const LCONTENT = LW - LMARGIN * 2;
+
+            doc.setFillColor(...AZUL);
+            doc.roundedRect(LMARGIN, y, LCONTENT, 12, 1.4, 1.4, 'F');
+            doc.setFillColor(...LARANJA);
+            doc.rect(LMARGIN, y, 2.8, 12, 'F');
+            doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+            doc.text('Diagrama do fluxo montado', LMARGIN + 7, y + 8);
+            tocEntries.push({ label: 'Diagrama do fluxo montado', page: doc.getNumberOfPages() });
+            y += 18;
+
+            const colCount = maxLevel + 1;
+            const colWidth = Math.min(58, LCONTENT / colCount);
+            const boxW = Math.max(24, colWidth - 8);
+            const boxH = 24;
+            const rowGap = 10;
+            const diagramTop = y;
+
+            const columns = [];
+            for (let lv = 0; lv <= maxLevel; lv++) columns.push(nodes.filter(n => level[String(n.id)] === lv));
+
+            const posOf = {}; // id -> retângulo da caixa desenhada, usado para traçar as conexões
+            columns.forEach((col, lv) => {
+                const colX = LMARGIN + lv * colWidth;
+                col.forEach((n, idx) => {
+                    const boxY = diagramTop + idx * (boxH + rowGap);
+                    const color = FLOW_COLORS[n.name] || CINZA;
+                    doc.setFillColor(...color);
+                    doc.roundedRect(colX, boxY, boxW, boxH, 1.8, 1.8, 'F');
+                    doc.setFillColor(255, 255, 255);
+                    doc.roundedRect(colX + 1.3, boxY + 1.3, boxW - 2.6, boxH - 2.6, 1.2, 1.2, 'F');
+                    doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...color);
+                    doc.text(FLOW_LABELS_SHORT[n.name] || n.name, colX + boxW / 2, boxY + 8.5, { align: 'center', maxWidth: boxW - 4 });
+                    const detail = flowShortText(n);
+                    if (detail) {
+                        doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+                        const dLines = doc.splitTextToSize(detail, boxW - 4).slice(0, 2);
+                        doc.text(dLines, colX + boxW / 2, boxY + 14.5, { align: 'center', maxWidth: boxW - 4 });
+                    }
+                    posOf[String(n.id)] = { x: colX, y: boxY, w: boxW, h: boxH };
+                });
+            });
+
+            // Conexões: linha em cotovelo da direita de um bloco até a esquerda do próximo,
+            // com o rótulo da aresta (ex.: a opção do menu) no meio do trajeto
+            nodes.forEach(n => {
+                const from = posOf[String(n.id)];
+                if (!from) return;
+                flowEdges(n).forEach(e => {
+                    const to = posOf[e.toId];
+                    if (!to) return;
+                    doc.setDrawColor(140, 150, 162);
+                    doc.setLineWidth(0.35);
+                    const x1 = from.x + from.w, y1 = from.y + from.h / 2;
+                    const x2 = to.x, y2 = to.y + to.h / 2;
+                    const midX = x1 + (x2 - x1) / 2;
+                    doc.line(x1, y1, midX, y1);
+                    doc.line(midX, y1, midX, y2);
+                    doc.line(midX, y2, x2, y2);
+                    doc.setFillColor(140, 150, 162);
+                    doc.triangle(x2, y2, x2 - 2.2, y2 - 1.4, x2 - 2.2, y2 + 1.4, 'F');
+                    if (e.label) {
+                        doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...CINZA);
+                        doc.text(e.label, midX, y1 - 1.8, { align: 'center', maxWidth: colWidth - 6 });
+                    }
+                });
+            });
+
+            /* ---------- Explicação de cada caminho, em texto (nova página, retrato) ---------- */
+            doc.addPage('a4', 'portrait');
+            y = 22;
+            sectionTitle('Caminhos possíveis do fluxo');
+
+            const paths = [];
+            function walk(id, trail, visited) {
+                const n = byId[id];
+                if (!n) return;
+                const detail = flowShortText(n);
+                const step = (FLOW_LABELS[n.name] || n.name) + (detail ? ` ("${detail}")` : '');
+                const newTrail = trail.concat(step);
+                if (visited.has(id)) { paths.push(newTrail.concat('(volta a um bloco anterior — ciclo no fluxo)')); return; }
+                const edges = flowEdges(n);
+                if (edges.length === 0) { paths.push(newTrail); return; }
+                const nextVisited = new Set(visited); nextVisited.add(id);
+                edges.forEach(e => {
+                    const edgeTrail = e.label ? newTrail.concat(`› ${e.label}`) : newTrail;
+                    walk(e.toId, edgeTrail, nextVisited);
+                });
+            }
+            if (inicio) walk(String(inicio.id), [], new Set());
+
+            if (paths.length === 0) {
+                doc.setFontSize(10.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+                doc.text('Não foi possível montar os caminhos (fluxo sem um bloco de Início conectado).', MARGIN, y);
+                y += 7;
+            } else {
+                paths.forEach((trail, i) => {
+                    doc.setFontSize(10.5);
+                    const lines = doc.splitTextToSize(trail.join('  ›  '), CONTENT - 4);
+                    ensureSpace(6 + lines.length * 5.4 + 5);
+                    doc.setFont('helvetica', 'bold'); doc.setTextColor(...LARANJA);
+                    doc.text(`Caminho ${i + 1}`, MARGIN, y);
+                    y += 6;
+                    doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA);
+                    doc.text(lines, MARGIN + 2, y);
+                    y += lines.length * 5.4 + 6;
+                });
+            }
         }
 
         /* ═══════════════════════════════════════════════
-           RODAPÉ FINAL em todas as páginas
+           Preenche o SUMÁRIO reservado (agora já sabemos a página de cada seção)
         ═══════════════════════════════════════════════ */
-        const total = doc.getNumberOfPages();
-        for (let p = 1; p <= total; p++) {
-            doc.setPage(p);
-            doc.setFontSize(8);
-            doc.setTextColor(160, 160, 160);
-            doc.text(`Levantamento IP Solution  •  Página ${p} de ${total}`, W / 2, 290, { align: 'center' });
-        }
+        doc.setPage(tocPageNum);
+        y = 22;
+        doc.setFillColor(...AZUL);
+        doc.roundedRect(MARGIN, y, CONTENT, 12, 1.4, 1.4, 'F');
+        doc.setFillColor(...LARANJA);
+        doc.rect(MARGIN, y, 2.8, 12, 'F');
+        doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+        doc.text('Sumário', MARGIN + 7, y + 8);
+        y += 20;
+        doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA_CLARO);
+        doc.text('Clique em qualquer item para ir direto à página (funciona em leitores de PDF como Adobe Reader e navegadores).', MARGIN, y);
+        y += 12;
+        tocEntries.forEach(entry => {
+            const rowTop = y - 5.5;
+            doc.setFontSize(11.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...AZUL);
+            doc.text(entry.label, MARGIN, y);
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(...CINZA_CLARO);
+            doc.text(String(entry.page), W - MARGIN, y, { align: 'right' });
+            // linha pontilhada guiando o olho do rótulo até o número da página
+            const labelW = doc.getTextWidth(entry.label);
+            doc.setLineDashPattern([0.6, 1.2], 0);
+            doc.setDrawColor(210, 214, 220);
+            doc.line(MARGIN + labelW + 4, y - 1.2, W - MARGIN - 8, y - 1.2);
+            doc.setLineDashPattern([], 0);
+            doc.link(MARGIN, rowTop, CONTENT, 8, { pageNumber: entry.page });
+            y += 11;
+        });
+
+        /* ═══════════════════════════════════════════════
+           RODAPÉ FINAL em todas as páginas (exceto a capa)
+        ═══════════════════════════════════════════════ */
+        paginate();
 
         /* ── salva o PDF ── */
         doc.save('Levantamento_IP_Solution.pdf');
@@ -1788,7 +2130,16 @@ function restoreDraft() {
     if (draft.numeros) {
         const numero = document.getElementById('numeroPrincipal');
         if (numero) numero.value = draft.numeros.principal || '';
+        setRadio('numeroAtivo', draft.numeros.ativo);
         setRadio('ura', draft.numeros.ura);
+        const uraResp = document.getElementById('uraResponsavel');
+        if (uraResp) uraResp.value = draft.numeros.uraResponsavel || '';
+        toggleField('uraResponsavelWrap', draft.numeros.ura === 'sim');
+    }
+
+    // Passo 6 — Agenda (o arquivo em si não é restaurável pelo navegador, só o nome salvo)
+    if (draft.agenda && draft.agenda.csvNome) {
+        showCsvFile(draft.agenda.csvNome);
     }
 
     // Passo 7 — BOT
@@ -2041,6 +2392,11 @@ document.addEventListener('DOMContentLoaded', () => {
         radio.addEventListener('change', () => toggleField('filaForaHorario', radio.value === 'direcionar' && radio.checked));
     });
 
+    // Campo condicional do Passo 5: contato do responsável só aparece quando há URA
+    document.querySelectorAll('input[name="ura"]').forEach(radio => {
+        radio.addEventListener('change', () => toggleField('uraResponsavelWrap', radio.value === 'sim' && radio.checked));
+    });
+
     // Delegação de eventos: um listener por tabela cobre todas as linhas, atuais e futuras
     document.getElementById('filasTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-delete');
@@ -2195,6 +2551,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Etapa 6 · Agenda: dropzone do CSV (clique ou arrastar-e-soltar)
+    setupCsvDropzone();
 
     // Fecha os dropdowns de multi-select ao clicar fora
     document.addEventListener('click', (e) => {
