@@ -20,6 +20,7 @@
             var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', theme);
         })();
+        document.documentElement.style.visibility = 'hidden';
     </script>
 </head>
 <body>
@@ -42,6 +43,7 @@
             <button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema claro/escuro">
                 <span class="theme-toggle-icon">🌙</span>
             </button>
+            <button type="button" class="fc-btn fc-btn-outline" id="btnLogout" title="Sair da sua conta">Sair</button>
         </div>
     </header>
 

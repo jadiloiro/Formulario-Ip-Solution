@@ -5,6 +5,8 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { SubmissionsModule } from './submissions/submissions.module';
 import { HealthModule } from './health/health.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 import { buildDataSourceOptions } from './config/database.config';
 
 @Module({
@@ -22,6 +24,8 @@ import { buildDataSourceOptions } from './config/database.config';
     }),
     SubmissionsModule,
     HealthModule,
+    UsersModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

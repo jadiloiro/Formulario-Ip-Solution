@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar - IP Solution</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-card">
+            <svg width="140" height="44" viewBox="0 0 180 56" xmlns="http://www.w3.org/2000/svg" aria-label="IP Solution" class="logo-svg gate-logo">
+              <g fill="none" fill-rule="evenodd">
+                <path d="M45 6c8.5 2 14.5 9.7 14.5 19s-6 17-14.5 19c9.8-1.6 17-10 17-19.9C62 14.2 54.8 5.7 45 6z" fill="var(--logo-accent)"/>
+                <rect x="6" y="16" width="7" height="26" rx="1.5" fill="var(--logo-mark)"/>
+                <rect x="6" y="4" width="7" height="7" rx="1.5" fill="var(--logo-mark)"/>
+                <path d="M20 4h16.5c7.5 0 13 5.3 13 12.6 0 7.3-5.5 12.6-13 12.6H27v13H20V4zm7 6.4v11.8h9c3.6 0 6-2.4 6-5.9s-2.4-5.9-6-5.9h-9z" fill="var(--logo-mark)"/>
+                <text x="2" y="52" font-family="'Segoe UI', Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1.5" fill="var(--logo-word)">SOLUTION</text>
+              </g>
+            </svg>
+
+            <form id="loginForm" class="auth-form">
+                <h1 class="auth-title">Acessar o portal</h1>
+                <p class="auth-sub">Use o login e a senha fornecidos pela Implantação.</p>
+
+                <label class="auth-label" for="loginInput">Login</label>
+                <input class="auth-input" type="text" id="loginInput" name="login" autocomplete="username" required>
+
+                <label class="auth-label" for="senhaInput">Senha</label>
+                <input class="auth-input" type="password" id="senhaInput" name="senha" autocomplete="current-password" required>
+
+                <p class="auth-error" id="loginError" hidden></p>
+
+                <button type="submit" class="auth-btn" id="loginBtn">Entrar</button>
+            </form>
+
+            <form id="changePasswordForm" class="auth-form" hidden>
+                <h1 class="auth-title">Troque sua senha</h1>
+                <p class="auth-sub">Este é seu primeiro acesso. Defina uma senha nova antes de continuar.</p>
+
+                <label class="auth-label" for="senhaAtualInput">Senha atual</label>
+                <input class="auth-input" type="password" id="senhaAtualInput" autocomplete="current-password" required>
+
+                <label class="auth-label" for="novaSenhaInput">Nova senha</label>
+                <input class="auth-input" type="password" id="novaSenhaInput" autocomplete="new-password" minlength="6" required>
+
+                <label class="auth-label" for="confirmarSenhaInput">Confirmar nova senha</label>
+                <input class="auth-input" type="password" id="confirmarSenhaInput" autocomplete="new-password" minlength="6" required>
+
+                <p class="auth-error" id="changePasswordError" hidden></p>
+
+                <button type="submit" class="auth-btn" id="changePasswordBtn">Salvar e entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script src="login.js"></script>
+</body>
+</html>

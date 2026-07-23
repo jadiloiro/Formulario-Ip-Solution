@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área ADM - IP Solution</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body class="auth-page admin-page">
+    <div class="admin-shell">
+        <header class="admin-header">
+            <span class="admin-header-title">
+                <i class="fa-solid fa-user-shield"></i> Área ADM &mdash; Implantação
+            </span>
+            <button type="button" class="auth-btn auth-btn-ghost" id="logoutBtn">Sair</button>
+        </header>
+
+        <div class="auth-card admin-card">
+            <h1 class="auth-title">Provisionar cliente</h1>
+            <p class="auth-sub">Cria o login e a senha inicial do cliente e define os módulos contratados. O cliente será obrigado a trocar a senha no primeiro acesso.</p>
+
+            <form id="createClientForm" class="auth-form">
+                <label class="auth-label" for="clientNameInput">Nome do cliente</label>
+                <input class="auth-input" type="text" id="clientNameInput" required>
+
+                <label class="auth-label" for="clientLoginInput">Login</label>
+                <input class="auth-input" type="text" id="clientLoginInput" autocomplete="off" required>
+
+                <label class="auth-label" for="clientSenhaInput">Senha inicial</label>
+                <input class="auth-input" type="password" id="clientSenhaInput" autocomplete="new-password" minlength="6" required>
+
+                <span class="auth-label">Módulos contratados</span>
+                <div class="auth-checkbox-row">
+                    <label class="auth-checkbox">
+                        <input type="checkbox" id="moduleWhatsappInput"> WhatsApp
+                    </label>
+                    <label class="auth-checkbox">
+                        <input type="checkbox" id="moduleTelefoniaInput"> Telefonia
+                    </label>
+                </div>
+
+                <p class="auth-error" id="createClientError" hidden></p>
+                <p class="auth-success" id="createClientSuccess" hidden></p>
+
+                <button type="submit" class="auth-btn" id="createClientBtn">Criar acesso do cliente</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

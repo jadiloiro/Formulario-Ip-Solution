@@ -28,6 +28,10 @@
                 document.documentElement.setAttribute('data-onboarding', 'unlocked');
             }
         })();
+        // A sessão é validada de forma assíncrona (cookie httpOnly, não dá pra checar
+        // sincronamente) — a página fica oculta até script.js confirmar login e revelar
+        // (evita mostrar o formulário protegido antes de saber se há sessão válida).
+        document.documentElement.style.visibility = 'hidden';
     </script>
 </head>
 <body>
@@ -142,12 +146,18 @@
                 <p class="header-sub">Leva cerca de 10 minutos — e seu progresso é salvo automaticamente, então pode parar e continuar quando quiser.</p>
             </div>
             <div class="header-actions">
+                <a href="admin.html" class="btn-header-link" id="adminLink" hidden title="Provisionar clientes (Implantação)">
+                    <i class="fa-solid fa-user-shield"></i> Área ADM
+                </a>
                 <button type="button" class="btn-back-gate" id="btnBackToGate" title="Voltar para escolher o tipo de onboarding (caso tenha selecionado errado)">
                     <i class="fa-solid fa-arrow-left"></i> Trocar tipo de onboarding
                 </button>
                 <button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
                     <span class="theme-toggle-icon">🌙</span>
                     <span class="theme-toggle-label">Tema escuro</span>
+                </button>
+                <button type="button" class="btn-header-link" id="btnLogout" title="Sair da sua conta">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sair
                 </button>
                 <button type="button" class="btn-reset-header" id="btnReset" title="Apagar todos os dados e recomeçar do zero">
                     🗑 Excluir dados e reiniciar

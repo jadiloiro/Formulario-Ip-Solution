@@ -1,12 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Permite que o frontend (mesmo aberto de outro host/porta) consuma a API
-  app.enableCors();
+  // Necessário para o SessionGuard ler o cookie httpOnly de sessão
+  app.use(cookieParser());
+
+  // Permite que o frontend (mesmo aberto de outro host/porta) consuma a API,
+  // com credentials habilitado para o cookie de sessão ir/voltar nas requisições
+  app.enableCors({ origin: true, credentials: true });
 
   // Valida e higieniza automaticamente todos os DTOs de entrada
   app.useGlobalPipes(
