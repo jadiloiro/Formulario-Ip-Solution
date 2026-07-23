@@ -178,9 +178,6 @@ const stepHelp = {
     }
 };
 
-// Anexos por etapa (armazenados em memória durante a sessão)
-const stepAttachments = {};
-
 /* ========================= Toasts ========================= */
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
@@ -288,12 +285,32 @@ function renderStepToolbar(step) {
     renderAttachments(step);
 }
 
-function renderAttachments(step) {
+function formatFileSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Anexos vivem no backend (tabela attachments) desde o início — o array em
+// memória só existe como cache pra não rebuscar a cada troca de etapa.
+async function fetchAttachments() {
+    if (!apiCtx.available || !apiCtx.submissionId) return [];
+    try {
+        const res = await fetch(`/api/submissions/${apiCtx.submissionId}/attachments`, { credentials: 'include' });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (e) {
+        return [];
+    }
+}
+
+async function renderAttachments(step) {
     const list = document.getElementById('attachList');
     const badge = document.getElementById('attachBadge');
     if (!list || !badge) return;
 
-    const files = stepAttachments[step] || [];
+    const all = await fetchAttachments();
+    const files = all.filter(f => f.stepNumber === step);
     list.innerHTML = '';
 
     if (files.length === 0) {
@@ -302,16 +319,24 @@ function renderAttachments(step) {
         empty.textContent = 'Nenhum arquivo anexado nesta etapa.';
         list.appendChild(empty);
     } else {
-        files.forEach((file, index) => {
+        files.forEach((file) => {
             const li = document.createElement('li');
-            li.innerHTML = `<span class="file-name" title="${escapeHtml(file.name)}">📄 ${escapeHtml(file.name)}</span>`;
+            const downloadUrl = `/api/submissions/${apiCtx.submissionId}/attachments/${file.id}/download`;
+            li.innerHTML = `<a class="file-name" href="${downloadUrl}" title="${escapeHtml(file.originalName)}" target="_blank" rel="noopener">📄 ${escapeHtml(file.originalName)} <span class="file-size">${formatFileSize(file.size)}</span></a>`;
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
-            removeBtn.setAttribute('aria-label', `Remover ${file.name}`);
+            removeBtn.setAttribute('aria-label', `Remover ${file.originalName}`);
             removeBtn.textContent = '×';
-            removeBtn.addEventListener('click', () => {
-                stepAttachments[step].splice(index, 1);
-                renderAttachments(step);
+            removeBtn.addEventListener('click', async () => {
+                removeBtn.disabled = true;
+                try {
+                    await fetch(`/api/submissions/${apiCtx.submissionId}/attachments/${file.id}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    });
+                } finally {
+                    renderAttachments(step);
+                }
             });
             li.appendChild(removeBtn);
             list.appendChild(li);
@@ -322,11 +347,29 @@ function renderAttachments(step) {
     badge.classList.toggle('hidden', files.length === 0);
 }
 
-function addAttachments(step, fileList) {
-    if (!stepAttachments[step]) stepAttachments[step] = [];
-    Array.from(fileList).forEach(file => stepAttachments[step].push(file));
+async function addAttachments(step, fileList) {
+    if (!apiCtx.available || !apiCtx.submissionId) {
+        showToast('Sem conexão com o servidor — não foi possível anexar o arquivo.', 'error');
+        return;
+    }
+    const files = Array.from(fileList);
+    let ok = 0;
+    for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('stepNumber', String(step));
+        try {
+            const res = await fetch(`/api/submissions/${apiCtx.submissionId}/attachments`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData,
+            });
+            if (res.ok) ok++;
+        } catch (e) { /* segue tentando os próximos arquivos */ }
+    }
     renderAttachments(step);
-    showToast(`${fileList.length} arquivo(s) anexado(s) a esta etapa.`, 'success');
+    if (ok > 0) showToast(`${ok} arquivo(s) anexado(s) a esta etapa.`, 'success');
+    if (ok < files.length) showToast(`${files.length - ok} arquivo(s) falharam ao enviar.`, 'error');
 }
 
 /* ========================= Etapa 6: dropzone do CSV de contatos ========================= */

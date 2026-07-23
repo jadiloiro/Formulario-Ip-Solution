@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Submission } from './entities/submission.entity';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { UpdateSubmissionDto } from './dto/update-submission.dto';
@@ -83,5 +85,8 @@ export class SubmissionsService {
   async remove(id: string, user: AuthUser): Promise<void> {
     const submission = await this.findOneForUser(id, user);
     await this.repo.remove(submission);
+    // Anexos em disco não têm FK do lado do arquivo — a linha some em cascata,
+    // mas o binário só é limpo aqui.
+    fs.rm(path.join(process.cwd(), 'uploads', id), { recursive: true, force: true }, () => {});
   }
 }

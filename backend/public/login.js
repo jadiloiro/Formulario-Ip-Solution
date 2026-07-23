@@ -1,7 +1,7 @@
 'use strict';
 
 function destinationFor(user) {
-    return user.role === 'super_admin' ? 'admin.html' : 'index.html';
+    return user.role === 'super_admin' ? 'clientes.html' : 'index.html';
 }
 
 async function checkExistingSession() {

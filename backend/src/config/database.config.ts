@@ -1,5 +1,6 @@
 import { DataSourceOptions } from 'typeorm';
 import { Submission } from '../submissions/entities/submission.entity';
+import { Attachment } from '../submissions/entities/attachment.entity';
 import { User } from '../users/entities/user.entity';
 import { Session } from '../auth/entities/session.entity';
 
@@ -16,7 +17,7 @@ export function buildDataSourceOptions(): DataSourceOptions {
     username: process.env.DB_USERNAME || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
     database: process.env.DB_DATABASE || 'ipsolution',
-    entities: [Submission, User, Session],
+    entities: [Submission, Attachment, User, Session],
     migrations: [`${__dirname}/../migrations/*.{js,ts}`],
     synchronize: false,
     migrationsRun: true,

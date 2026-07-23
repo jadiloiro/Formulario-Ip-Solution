@@ -234,6 +234,14 @@ async function loadResumo() {
     const user = await requireAuth();
     if (!user) return;
 
+    // Quem chega aqui pela Área ADM (clientes.html) precisa voltar pra lá — não
+    // pro formulário do cliente, que nem faz sentido pro papel de super_admin.
+    const backLink = document.getElementById('resumoBackLink');
+    if (user.role === 'super_admin') {
+        backLink.href = 'clientes.html';
+        backLink.lastChild.textContent = ' Voltar para Clientes';
+    }
+
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     if (!id) {
