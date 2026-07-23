@@ -15,16 +15,30 @@ const STORAGE = {
    Telefonia ainda não existe — só "WhatsApp" desbloqueia o formulário. A escolha fica salva
    no localStorage (lida também no <head> de index.html, antes do 1º paint, pra não piscar
    o formulário atrás do portal quando o cliente já escolheu antes). */
-function initOnboardingGate() {
+function initOnboardingGate(user) {
     const whatsappBtn = document.getElementById('gateOptionWhatsapp');
     const telefoniaBtn = document.getElementById('gateOptionTelefonia');
     const message = document.getElementById('gateMessage');
     if (!whatsappBtn || !telefoniaBtn) return;
 
-    whatsappBtn.addEventListener('click', () => {
-        localStorage.setItem(STORAGE.ONBOARDING_TYPE, 'whatsapp');
-        document.documentElement.setAttribute('data-onboarding', 'unlocked');
-    });
+    // RBAC por módulo: só quem tem WhatsApp contratado (definido pela Implantação
+    // ao criar a conta) pode desbloquear este formulário — a validação real (que
+    // não pode ser burlada pelo DevTools) é repetida no backend em todo PATCH/POST.
+    if (user && !user.moduleWhatsapp) {
+        whatsappBtn.disabled = true;
+        whatsappBtn.classList.add('gate-option-disabled');
+        whatsappBtn.addEventListener('click', () => {
+            if (message) {
+                message.textContent = 'Seu contrato não inclui o módulo WhatsApp. Fale com a Implantação para contratar.';
+                message.hidden = false;
+            }
+        });
+    } else {
+        whatsappBtn.addEventListener('click', () => {
+            localStorage.setItem(STORAGE.ONBOARDING_TYPE, 'whatsapp');
+            document.documentElement.setAttribute('data-onboarding', 'unlocked');
+        });
+    }
     telefoniaBtn.addEventListener('click', () => {
         if (message) message.hidden = false;
     });
@@ -39,31 +53,29 @@ function initOnboardingGate() {
     }
 }
 
-/* ========================= API (backend NestJS, opcional) =========================
-   Se o backend estiver servindo a página, o rascunho ganha backup no servidor
-   e o "Finalizar" envia o levantamento de verdade. Sem backend, tudo segue
-   funcionando offline com localStorage. */
+/* ========================= API (backend NestJS) =========================
+   Login agora é obrigatório (ver shared.js: requireAuth), então a API sempre está
+   disponível quando o formulário chega a renderizar. apiCtx.available cobre só
+   falhas transitórias de rede durante o uso — o localStorage segue como cópia local. */
 const apiCtx = { available: false, submissionId: null };
 
 async function initApiSync() {
-    if (!location.protocol.startsWith('http')) return;
     try {
-        const health = await fetch('/api/health');
-        if (!health.ok) return;
-        const current = await fetch(`/api/submissions/current?sessionId=${encodeURIComponent(getClientId())}`);
+        const current = await fetch('/api/submissions/current', { credentials: 'include' });
         if (!current.ok) return;
         const submission = await current.json();
         apiCtx.available = true;
         apiCtx.submissionId = submission.id;
-    } catch (e) { /* sem backend: modo offline */ }
+    } catch (e) { /* falha transitória: autosave tenta de novo na próxima alteração */ }
 }
 
 function pushDraftToApi(draft) {
     if (!apiCtx.available || !apiCtx.submissionId) return;
     fetch(`/api/submissions/${apiCtx.submissionId}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formData: draft })
+        body: JSON.stringify({ formData: draft, onboardingType: 'whatsapp' })
     }).catch(() => { /* rede falhou: o localStorage continua como cópia local */ });
 }
 
@@ -72,10 +84,14 @@ async function finalizeSubmission(draft) {
     try {
         await fetch(`/api/submissions/${apiCtx.submissionId}`, {
             method: 'PATCH',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ formData: draft })
+            body: JSON.stringify({ formData: draft, onboardingType: 'whatsapp' })
         });
-        const res = await fetch(`/api/submissions/${apiCtx.submissionId}/submit`, { method: 'POST' });
+        const res = await fetch(`/api/submissions/${apiCtx.submissionId}/submit`, {
+            method: 'POST',
+            credentials: 'include'
+        });
         return res.ok;
     } catch (e) {
         return false;
@@ -2360,11 +2376,21 @@ function setupConfigAccordion() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    initOnboardingGate();
+document.addEventListener('DOMContentLoaded', async () => {
+    // Login é obrigatório: sem sessão válida, requireAuth já redireciona para login.html
+    // e a página (oculta desde o <head>) nunca chega a ser revelada.
+    const authUser = await requireAuth();
+    if (!authUser) return;
 
-    // Detecta o backend NestJS em segundo plano (não bloqueia o carregamento)
-    initApiSync();
+    const adminLink = document.getElementById('adminLink');
+    if (adminLink) adminLink.hidden = authUser.role !== 'super_admin';
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) btnLogout.addEventListener('click', logout);
+
+    initOnboardingGate(authUser);
+
+    // Busca o rascunho atual no backend (a sessão já garante que é só o do usuário logado)
+    await initApiSync();
 
     // Sincroniza o botão de tema com o tema já aplicado (definido no <head> antes do carregamento)
     const activeTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -2778,9 +2804,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (apiCtx.available && apiCtx.submissionId) {
             fetch(`/api/submissions/${apiCtx.submissionId}/flow`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ flowData: graph })
-            }).catch(() => { /* offline: localStorage cobre */ });
+            }).catch(() => { /* falha transitória: localStorage cobre */ });
         }
         ifeValidate();
         renderFilasList();

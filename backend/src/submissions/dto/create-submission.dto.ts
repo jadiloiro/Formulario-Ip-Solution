@@ -19,4 +19,8 @@ export class CreateSubmissionDto {
   @IsOptional()
   @IsIn(['rascunho', 'enviado'])
   status?: 'rascunho' | 'enviado';
+
+  @IsOptional()
+  @IsIn(['whatsapp', 'telefonia'])
+  onboardingType?: 'whatsapp' | 'telefonia';
 }

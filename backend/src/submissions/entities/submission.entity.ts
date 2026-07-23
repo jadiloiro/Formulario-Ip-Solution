@@ -21,10 +21,19 @@ export class Submission {
   @Column({ default: 'Cliente sem nome' })
   clientName: string;
 
-  /** Identificador gerado pelo navegador (localStorage) — isola o "current" de cada
-   *  atendente para que sessões simultâneas não sobrescrevam o rascunho umas das outras. */
+  /** Identificador gerado pelo navegador (localStorage) — legado de antes do login
+   *  por conta; não é mais usado para isolamento (isso agora é feito por userId). */
   @Column({ type: 'varchar', nullable: true })
   sessionId: string | null;
+
+  /** Dono do levantamento — a fronteira real de isolamento entre clientes. */
+  @Column({ type: 'uuid', nullable: true })
+  userId: string | null;
+
+  /** Módulo contratado ao qual este levantamento pertence; validado contra os
+   *  módulos do usuário (moduleWhatsapp/moduleTelefonia) antes de criar/editar. */
+  @Column({ type: 'varchar', nullable: true })
+  onboardingType: 'whatsapp' | 'telefonia' | null;
 
   /** JSON serializado do formulário (mesma estrutura do rascunho do frontend) */
   @Column({ type: 'simple-json', nullable: true })

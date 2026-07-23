@@ -22,14 +22,60 @@ function debounce(fn, wait) {
     };
 }
 
-/* Identificador deste navegador: isola qual rascunho é "meu" no backend,
-   evitando que duas pessoas preenchendo ao mesmo tempo se sobrescrevam. */
-const CLIENT_ID_KEY = 'ipsolution_client_id';
-function getClientId() {
-    let id = localStorage.getItem(CLIENT_ID_KEY);
-    if (!id) {
-        id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-        localStorage.setItem(CLIENT_ID_KEY, id);
+/* ========================= Autenticação =========================
+   A sessão em si é um cookie httpOnly (o JS nunca a lê nem a escreve — isso é
+   proposital, protege contra roubo de sessão via XSS). O que fica em localStorage
+   é só um "espelho" do usuário logado (id/login/role/módulos), pra UI decidir o
+   que mostrar sem precisar bater na API a cada clique. Todo fetch autenticado
+   ainda precisa de credentials:'include' pra levar o cookie. */
+const AUTH_USER_KEY = 'ipsolution_auth_user';
+
+function getAuthUser() {
+    try {
+        const raw = localStorage.getItem(AUTH_USER_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
     }
-    return id;
+}
+
+function setAuthUser(user) {
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+}
+
+function clearAuthUser() {
+    localStorage.removeItem(AUTH_USER_KEY);
+}
+
+/** Confirma a sessão com o backend (fonte da verdade) e mantém o espelho local
+ *  atualizado. Redireciona para login.html se não houver sessão válida. */
+async function requireAuth() {
+    try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!res.ok) {
+            clearAuthUser();
+            window.location.href = 'login.html';
+            return null;
+        }
+        const { user } = await res.json();
+        setAuthUser(user);
+        if (user.mustChangePassword) {
+            window.location.href = 'login.html';
+            return null;
+        }
+        document.documentElement.style.visibility = 'visible';
+        return user;
+    } catch (e) {
+        clearAuthUser();
+        window.location.href = 'login.html';
+        return null;
+    }
+}
+
+async function logout() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) { /* mesmo se a rede falhar, limpa o lado do cliente */ }
+    clearAuthUser();
+    window.location.href = 'login.html';
 }

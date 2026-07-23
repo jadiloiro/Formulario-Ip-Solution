@@ -380,6 +380,7 @@ function saveNow() {
     if (api.available && api.submissionId) {
         fetch(`/api/submissions/${api.submissionId}/flow`, {
             method: 'PUT',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ flowData: graph })
         }).catch(() => { /* rede falhou: o localStorage segue como cópia local */ });
@@ -672,11 +673,8 @@ function setupZoom() {
 
 /* ========================= API (backend NestJS) ========================= */
 async function initApi() {
-    if (!location.protocol.startsWith('http')) return null;
     try {
-        const health = await fetch('/api/health');
-        if (!health.ok) return null;
-        const current = await fetch(`/api/submissions/current?sessionId=${encodeURIComponent(getClientId())}`);
+        const current = await fetch('/api/submissions/current', { credentials: 'include' });
         if (!current.ok) return null;
         const submission = await current.json();
         api.available = true;
@@ -684,12 +682,19 @@ async function initApi() {
         updateSyncPill();
         return submission.flowData || null;
     } catch (e) {
-        return null; // sem backend: segue 100% offline
+        return null; // falha transitória: segue local até a próxima tentativa de save
     }
 }
 
 /* ========================= Inicialização ========================= */
 document.addEventListener('DOMContentLoaded', async () => {
+    // Login é obrigatório: sem sessão válida, requireAuth já redireciona para login.html
+    // e a página (oculta desde o <head>) nunca chega a ser revelada.
+    const authUser = await requireAuth();
+    if (!authUser) return;
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) btnLogout.addEventListener('click', logout);
+
     applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
