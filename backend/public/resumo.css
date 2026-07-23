@@ -1,0 +1,188 @@
+/* ==============================================================
+   Tela de resumo final do onboarding — pensada para ser "impressa"
+   com fidelidade 1:1 (Ctrl+P do navegador ou Playwright headless).
+   Por isso o layout já nasce dentro dos limites seguros de uma
+   página A4 (210mm) e cada bloco evita quebrar no meio da página.
+   ============================================================== */
+
+:root {
+    --azul: #002b5e;
+    --azul-claro: #0a4488;
+    --laranja: #e85d04;
+    --verde: #1c8a4b;
+    --cinza: #3d454d;
+    --cinza-claro: #6b7480;
+    --borda: #e1e4e8;
+    --bg-suave: #f6f8fa;
+    --branco: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-suave);
+    color: var(--cinza);
+    font-family: 'IBM Plex Sans', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* ── Barra superior (some na impressão) ── */
+.resumo-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--branco);
+    border-bottom: 1px solid var(--borda);
+}
+.resumo-toolbar-link {
+    color: var(--azul);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+}
+.resumo-toolbar-link:hover { text-decoration: underline; }
+.resumo-toolbar-actions { display: flex; align-items: center; gap: 12px; }
+.resumo-toolbar-status { font-size: 12.5px; color: var(--cinza-claro); }
+.resumo-btn {
+    border: 1px solid var(--borda);
+    background: var(--branco);
+    color: var(--azul);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+.resumo-btn-primary { background: var(--azul); color: var(--branco); border-color: var(--azul); }
+.resumo-btn-primary:hover { background: var(--azul-claro); }
+
+/* ── Documento: largura fixa próxima de uma A4 útil (210mm - margens) ── */
+.resumo-doc {
+    max-width: 780px;
+    margin: 28px auto 60px;
+    padding: 0 16px;
+}
+
+.resumo-card {
+    background: var(--branco);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 22px 26px;
+    margin-bottom: 18px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.resumo-section-title {
+    font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--branco);
+    background: var(--azul);
+    border-left: 4px solid var(--laranja);
+    padding: 10px 14px;
+    margin: -22px -26px 18px;
+    border-radius: 8px 8px 0 0;
+}
+
+/* ── Capa ── */
+.resumo-cover { text-align: center; padding-top: 0; overflow: hidden; }
+.resumo-cover-band {
+    background: linear-gradient(135deg, var(--azul), var(--azul-claro));
+    margin: -22px -26px 20px;
+    padding: 26px 16px 20px;
+}
+.resumo-cover-title { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: var(--azul); margin: 4px 0 2px; }
+.resumo-cover-sub { font-size: 13px; color: var(--cinza-claro); margin: 0 0 10px; }
+.resumo-cover-client { font-size: 14px; font-weight: 600; color: var(--laranja); margin: 0; }
+.resumo-cover-date { font-size: 11.5px; color: var(--cinza-claro); margin: 4px 0 18px; }
+.resumo-cover-stats { display: flex; justify-content: center; gap: 0; border-top: 1px solid var(--borda); padding-top: 16px; }
+.resumo-stat { flex: 1; padding: 0 12px; border-left: 1px solid var(--borda); }
+.resumo-stat:first-child { border-left: none; }
+.resumo-stat-num { display: block; font-size: 22px; font-weight: 700; color: var(--azul); font-family: 'Space Grotesk', sans-serif; }
+.resumo-stat-label { display: block; font-size: 11.5px; color: var(--cinza-claro); }
+
+/* ── Tabelas ── */
+table.resumo-table { width: 100%; border-collapse: collapse; font-size: 12.5px; break-inside: avoid; page-break-inside: avoid; }
+table.resumo-table th, table.resumo-table td {
+    border: 1px solid var(--borda);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+table.resumo-table th { background: var(--azul); color: var(--branco); font-weight: 600; }
+table.resumo-table tr:nth-child(even) td { background: var(--bg-suave); }
+
+/* ── Campos rótulo/valor ── */
+.resumo-field { margin-bottom: 12px; break-inside: avoid; page-break-inside: avoid; }
+.resumo-field-label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--laranja); margin-bottom: 3px; }
+.resumo-field-value { font-size: 13.5px; color: var(--azul); white-space: pre-line; }
+
+.resumo-msg-block {
+    background: var(--bg-suave);
+    border-left: 3px solid var(--verde);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 6px 0 14px;
+    font-size: 12.5px;
+    white-space: pre-line;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.resumo-subtitle {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--laranja);
+    margin: 16px 0 8px;
+}
+.resumo-subtitle:first-child { margin-top: 0; }
+
+.resumo-empty { color: var(--cinza-claro); font-style: italic; font-size: 13px; }
+
+.resumo-flow-summary {
+    background: var(--bg-suave);
+    border: 1px solid var(--borda);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.resumo-footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--cinza-claro);
+    margin-top: 24px;
+}
+
+/* ── Erro (submissão não encontrada / sem acesso) ── */
+.resumo-error {
+    max-width: 420px;
+    margin: 80px auto;
+    text-align: center;
+    background: var(--branco);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 32px;
+}
+.resumo-error p { color: var(--cinza); margin-bottom: 16px; }
+
+/* ── Impressão: some com a UI de navegação, o resto já está "print-ready" ── */
+@media print {
+    .no-print { display: none !important; }
+    body { background: var(--branco); }
+    .resumo-doc { margin: 0 auto; max-width: 100%; }
+    .resumo-card { box-shadow: none; }
+}
