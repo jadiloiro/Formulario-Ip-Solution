@@ -41,7 +41,7 @@ async function main() {
         await page.fill('#loginInput', LOGIN);
         await page.fill('#senhaInput', SENHA);
         await Promise.all([
-            page.waitForURL(/index\.html|admin\.html/, { timeout: 15000 }),
+            page.waitForURL(/index\.html|clientes\.html/, { timeout: 15000 }),
             page.click('#loginBtn'),
         ]);
 
@@ -49,8 +49,8 @@ async function main() {
         if (loginError) {
             throw new Error('Login falhou: ' + (await page.locator('#loginError').textContent()));
         }
-        if (/admin\.html/.test(page.url())) {
-            throw new Error(`A conta "${LOGIN}" é super_admin e cai em admin.html, não no formulário de onboarding. Use uma conta "cliente".`);
+        if (/clientes\.html/.test(page.url())) {
+            throw new Error(`A conta "${LOGIN}" é super_admin e cai em clientes.html (Área ADM), não no formulário de onboarding. Use uma conta "cliente".`);
         }
 
         // ── 2. Portal de escolha do tipo de onboarding (se aparecer) ─────────────

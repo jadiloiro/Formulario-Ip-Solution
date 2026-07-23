@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área ADM - IP Solution</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="clientes.css">
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+        document.documentElement.style.visibility = 'hidden';
+    </script>
+</head>
+<body class="clientes-page">
+
+    <header class="cli-header">
+        <span class="cli-header-title"><i class="fa-solid fa-user-shield"></i> Área ADM &mdash; Implantação</span>
+        <nav class="cli-header-nav" id="cliTabs">
+            <button type="button" class="cli-nav-link active" data-view="clientes">Clientes</button>
+            <button type="button" class="cli-nav-link" data-view="form">+ Cadastrar cliente</button>
+        </nav>
+        <div class="cli-header-actions">
+            <button type="button" class="theme-toggle" id="themeToggle" title="Alternar tema claro/escuro">
+                <span class="theme-toggle-icon">🌙</span>
+            </button>
+            <button type="button" class="cli-btn cli-btn-ghost" id="logoutBtn">Sair</button>
+        </div>
+    </header>
+
+    <main class="cli-shell">
+
+        <!-- ═══════ Aba: lista de clientes ═══════ -->
+        <div class="cli-view" id="viewClientes">
+
+            <section class="cli-summary" id="cliSummary" aria-label="Resumo geral"></section>
+
+            <section class="cli-toolbar">
+                <div class="cli-search">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" id="cliSearchInput" placeholder="Buscar por nome ou login...">
+                </div>
+                <div class="cli-filters" id="cliFilters" role="group" aria-label="Filtrar por status">
+                    <button type="button" class="cli-filter-btn active" data-filter="todos">Todos</button>
+                    <button type="button" class="cli-filter-btn" data-filter="andamento">Em andamento</button>
+                    <button type="button" class="cli-filter-btn" data-filter="enviado">Enviado</button>
+                    <button type="button" class="cli-filter-btn" data-filter="nao_iniciado">Não iniciado</button>
+                </div>
+            </section>
+
+            <section class="cli-grid" id="cliGrid" aria-live="polite"></section>
+
+            <p class="cli-empty hidden" id="cliEmptyState">Nenhum cliente cadastrado ainda. <a href="#" data-view-link="form">Cadastrar o primeiro cliente →</a></p>
+            <p class="cli-empty hidden" id="cliNoMatch">Nenhum cliente corresponde à busca/filtro atual.</p>
+        </div>
+
+        <!-- ═══════ Aba: cadastrar/editar cliente ═══════ -->
+        <div class="cli-view hidden" id="viewForm">
+            <div class="cli-form-card">
+                <h1 class="auth-title" id="cliFormTitle">Cadastrar cliente</h1>
+                <p class="auth-sub" id="cliFormSub">Cria o login e a senha inicial do cliente e define os módulos contratados. O cliente será obrigado a trocar a senha no primeiro acesso.</p>
+
+                <form id="clientForm" class="auth-form">
+                    <input type="hidden" id="clientIdInput">
+
+                    <label class="auth-label" for="clientNameInput">Nome do cliente</label>
+                    <input class="auth-input" type="text" id="clientNameInput" required>
+
+                    <label class="auth-label" for="clientLoginInput">Login</label>
+                    <input class="auth-input" type="text" id="clientLoginInput" autocomplete="off" required>
+
+                    <label class="auth-label" for="clientSenhaInput" id="clientSenhaLabel">Senha inicial</label>
+                    <input class="auth-input" type="password" id="clientSenhaInput" autocomplete="new-password" minlength="6">
+                    <p class="cli-field-hint hidden" id="clientSenhaHint">Deixe em branco para manter a senha atual. Se preencher, o cliente terá que trocá-la no próximo login.</p>
+
+                    <span class="auth-label">Módulos contratados</span>
+                    <div class="auth-checkbox-row">
+                        <label class="auth-checkbox">
+                            <input type="checkbox" id="moduleWhatsappInput"> WhatsApp
+                        </label>
+                        <label class="auth-checkbox">
+                            <input type="checkbox" id="moduleTelefoniaInput"> Telefonia
+                        </label>
+                    </div>
+
+                    <p class="auth-error" id="clientFormError" hidden></p>
+                    <p class="auth-success" id="clientFormSuccess" hidden></p>
+
+                    <div class="cli-form-actions">
+                        <button type="button" class="auth-btn auth-btn-ghost" id="cancelEditBtn" hidden>Cancelar edição</button>
+                        <button type="submit" class="auth-btn" id="clientFormSubmitBtn">Criar acesso do cliente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal de confirmação de exclusão -->
+    <div class="cli-modal-overlay hidden" id="deleteModalOverlay">
+        <div class="cli-modal" role="alertdialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+            <h2 class="cli-modal-title" id="deleteModalTitle">Excluir cliente?</h2>
+            <p class="cli-modal-body" id="deleteModalBody"></p>
+            <p class="cli-modal-warning">O login deixa de funcionar imediatamente. Levantamentos já enviados não são apagados, mas ficam sem um dono.</p>
+            <div class="cli-modal-actions">
+                <button type="button" class="cli-btn" id="deleteCancelBtn">Cancelar</button>
+                <button type="button" class="cli-btn cli-btn-danger" id="deleteConfirmBtn">Excluir cliente</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script src="clientes.js"></script>
+</body>
+</html>

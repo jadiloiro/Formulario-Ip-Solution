@@ -1,0 +1,390 @@
+/* ==============================================================
+   Painel "Clientes" — Área ADM. Mesma paleta/tipografia do resto
+   do produto (style.css), com um layout próprio: grade de cartões,
+   cada um com uma "trilha" de 7 etapas que espelha os mesmos ícones
+   da sidebar do onboarding — quem já viu o formulário do cliente
+   reconhece de cara em que passo ele está.
+   ============================================================== */
+
+body.clientes-page {
+    display: block;
+    background: var(--bg-light);
+    font-family: var(--font-body);
+    color: var(--text-dark);
+    min-height: 100vh;
+}
+
+/* ── Header ── */
+.cli-header {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 14px 28px;
+    background: var(--primary-blue);
+    color: var(--white);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+.cli-header-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    white-space: nowrap;
+}
+.cli-header-nav { display: flex; gap: 4px; flex: 1; }
+.cli-nav-link {
+    border: none;
+    background: none;
+    font-family: inherit;
+    color: rgba(255,255,255,0.72);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.cli-nav-link:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+.cli-nav-link.active { background: rgba(255,255,255,0.16); color: var(--white); font-weight: 600; }
+.cli-header-actions { display: flex; align-items: center; gap: 10px; }
+.cli-header-actions .theme-toggle {
+    background: rgba(255,255,255,0.12);
+    border: none;
+    border-radius: 6px;
+    padding: 7px 10px;
+    cursor: pointer;
+    color: var(--white);
+}
+.cli-btn {
+    border: 1px solid rgba(255,255,255,0.3);
+    background: transparent;
+    color: var(--white);
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.cli-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* ── Shell ── */
+.cli-shell { max-width: 1180px; margin: 0 auto; padding: 24px 24px 60px; }
+
+/* ── Resumo (stat strip) ── */
+.cli-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+}
+.cli-stat {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    box-shadow: var(--shadow);
+}
+.cli-stat-num {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--primary-blue);
+    line-height: 1;
+}
+.cli-stat-label { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+.cli-stat.accent-orange .cli-stat-num { color: var(--action-orange); }
+.cli-stat.accent-green .cli-stat-num { color: var(--success); }
+
+/* ── Busca + filtros ── */
+.cli-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.cli-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 9px 14px;
+    flex: 1;
+    min-width: 220px;
+    max-width: 340px;
+    color: var(--text-muted);
+}
+.cli-search input {
+    border: none;
+    background: none;
+    outline: none;
+    font-size: 13.5px;
+    color: var(--text-dark);
+    width: 100%;
+    font-family: var(--font-body);
+}
+.cli-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.cli-filter-btn {
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-muted);
+    padding: 7px 13px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.cli-filter-btn:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+.cli-filter-btn.active { background: var(--primary-blue); border-color: var(--primary-blue); color: var(--white); }
+.cli-filter-btn:focus-visible, .cli-search input:focus-visible, .cli-nav-link:focus-visible {
+    outline: 2px solid var(--action-orange);
+    outline-offset: 2px;
+}
+
+/* ── Grade de cartões ── */
+.cli-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.cli-card {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.cli-card:hover { box-shadow: var(--shadow-strong); transform: translateY(-1px); }
+
+.cli-card-head { display: flex; align-items: flex-start; gap: 12px; }
+.cli-avatar {
+    width: 40px; height: 40px; flex-shrink: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
+    color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 15px;
+}
+.cli-card-id { flex: 1; min-width: 0; }
+.cli-card-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15.5px;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cli-card-login { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+.cli-card-modules { display: flex; gap: 5px; margin-top: 5px; }
+.cli-chip {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--accent-tint-10);
+    color: var(--primary-blue);
+}
+
+.cli-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.cli-badge.status-enviado { background: rgba(28,138,75,0.12); color: var(--success); }
+.cli-badge.status-andamento { background: rgba(232,93,4,0.12); color: var(--action-orange); }
+.cli-badge.status-nao_iniciado { background: var(--accent-tint-08); color: var(--text-muted); }
+
+/* ── Trilha das 7 etapas: o elemento-assinatura do painel ── */
+.cli-track { display: flex; align-items: center; }
+.cli-track-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    position: relative;
+}
+.cli-track-dot {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    z-index: 1;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.cli-track-step.done .cli-track-dot { background: var(--primary-blue); border-color: var(--primary-blue); color: var(--white); }
+.cli-track-step.current .cli-track-dot { border-color: var(--action-orange); color: var(--action-orange); box-shadow: 0 0 0 3px var(--accent-tint-10); }
+.cli-track-line {
+    position: absolute;
+    top: 13px; left: 50%; right: -50%;
+    height: 2px;
+    background: var(--border-color-strong);
+    z-index: 0;
+}
+.cli-track-step.done .cli-track-line { background: var(--primary-blue); }
+.cli-track-step:last-child .cli-track-line { display: none; }
+.cli-track-caption { font-size: 9px; color: var(--text-muted); text-align: center; line-height: 1.15; max-width: 44px; }
+.cli-track-progress-label {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-left: 10px;
+    white-space: nowrap;
+}
+
+.cli-card-notstarted { font-size: 12.5px; color: var(--text-muted); font-style: italic; padding: 4px 0; }
+
+/* ── Arquivos ── */
+.cli-files { border-top: 1px solid var(--border-color); padding-top: 12px; }
+.cli-files-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%;
+    background: none; border: none; cursor: pointer;
+    font-size: 12.5px; font-weight: 600; color: var(--text-dark);
+    padding: 0;
+}
+.cli-files-toggle .fa-chevron-down { transition: transform 0.2s; font-size: 10px; color: var(--text-muted); }
+.cli-files.open .cli-files-toggle .fa-chevron-down { transform: rotate(180deg); }
+.cli-files-count {
+    font-family: var(--font-mono);
+    background: var(--accent-tint-08);
+    color: var(--primary-blue);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 10.5px;
+    margin-left: 6px;
+}
+.cli-files-list { list-style: none; margin: 10px 0 0; padding: 0; display: none; flex-direction: column; gap: 6px; }
+.cli-files.open .cli-files-list { display: flex; }
+.cli-files-list li {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--bg-light);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+.cli-files-list .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; text-decoration: none; flex: 1; }
+.cli-files-list .file-name:hover { text-decoration: underline; }
+.cli-files-list .file-size { color: var(--text-muted); font-size: 10.5px; margin-left: 4px; }
+.cli-files-empty { font-size: 12px; color: var(--text-muted); font-style: italic; margin: 8px 0 0; }
+
+.cli-card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11.5px; color: var(--text-muted);
+    margin-top: -2px;
+}
+.cli-card-link {
+    color: var(--primary-blue);
+    text-decoration: none;
+    font-weight: 600;
+}
+.cli-card-link:hover { text-decoration: underline; }
+
+.cli-empty {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    padding: 60px 20px;
+}
+.cli-empty a { color: var(--primary-blue); font-weight: 600; cursor: pointer; }
+
+/* ── Aba "Cadastrar/editar cliente" ── */
+.cli-form-card {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 28px 32px 32px;
+    max-width: 480px;
+    margin: 10px auto 0;
+}
+.cli-field-hint { font-size: 11.5px; color: var(--text-muted); margin: -10px 0 4px; }
+.cli-form-actions { display: flex; gap: 10px; }
+.cli-form-actions .auth-btn { flex: 1; margin-top: 22px; width: auto; }
+.cli-form-actions .auth-btn-ghost {
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+.cli-form-actions .auth-btn-ghost:hover { background: var(--surface-hover); border-color: var(--border-color-strong); }
+
+/* ── Ações no cartão do cliente (editar/excluir) ── */
+.cli-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.cli-icon-btn {
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-muted);
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.cli-icon-btn:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+.cli-icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ── Modal de confirmação ── */
+.cli-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    padding: 20px;
+}
+.cli-modal {
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: var(--shadow-strong);
+    padding: 26px 28px;
+    max-width: 400px;
+    width: 100%;
+}
+.cli-modal-title { font-family: var(--font-display); font-size: 17px; color: var(--text-dark); margin: 0 0 10px; }
+.cli-modal-body { font-size: 14px; color: var(--text-dark); margin: 0 0 6px; }
+.cli-modal-warning { font-size: 12px; color: var(--text-muted); margin: 0 0 20px; }
+.cli-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+/* .cli-btn "puro" foi pensado pro header escuro (texto branco) — no modal,
+   sobre fundo claro, precisa da paleta invertida pra não sumir. */
+.cli-modal-actions .cli-btn:not(.cli-btn-danger) {
+    background: var(--surface);
+    color: var(--text-dark);
+    border: 1px solid var(--border-color);
+}
+.cli-modal-actions .cli-btn:not(.cli-btn-danger):hover { background: var(--surface-hover); border-color: var(--border-color-strong); }
+.cli-btn-danger { background: var(--danger); border-color: var(--danger); color: var(--white); }
+.cli-btn-danger:hover { background: #b8283a; }
+
+.hidden { display: none !important; }
+
+@media (max-width: 640px) {
+    .cli-header { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
+    .cli-shell { padding: 18px 14px 50px; }
+    .cli-toolbar { flex-direction: column; align-items: stretch; }
+    .cli-search { max-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cli-card, .cli-nav-link, .cli-filter-btn, .cli-track-dot, .cli-files-toggle .fa-chevron-down {
+        transition: none;
+    }
+}
