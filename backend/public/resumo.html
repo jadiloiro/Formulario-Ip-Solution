@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumo do Levantamento - IP Solution</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+    <link rel="stylesheet" href="resumo.css">
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+        // Mesmo padrão de index.html/Flowchart.html: some até requireAuth() confirmar a sessão.
+        document.documentElement.style.visibility = 'hidden';
+    </script>
+</head>
+<body>
+
+    <div class="resumo-toolbar no-print">
+        <a href="index.html" class="resumo-toolbar-link"><i>←</i> Voltar ao formulário</a>
+        <div class="resumo-toolbar-actions">
+            <span class="resumo-toolbar-status" id="resumoStatus"></span>
+            <button type="button" class="resumo-btn resumo-btn-primary" id="btnBaixarPdf">🖨️ Baixar PDF</button>
+        </div>
+    </div>
+
+    <main class="resumo-doc" id="resumoDoc" hidden>
+
+        <!-- Capa -->
+        <section class="resumo-card resumo-cover" id="resumoCover">
+            <div class="resumo-cover-band">
+                <svg width="130" height="41" viewBox="0 0 180 56" xmlns="http://www.w3.org/2000/svg" aria-label="IP Solution" class="resumo-logo">
+                    <g fill="none" fill-rule="evenodd">
+                        <path d="M45 6c8.5 2 14.5 9.7 14.5 19s-6 17-14.5 19c9.8-1.6 17-10 17-19.9C62 14.2 54.8 5.7 45 6z" fill="#e85d04"/>
+                        <rect x="6" y="16" width="7" height="26" rx="1.5" fill="#fff"/>
+                        <rect x="6" y="4" width="7" height="7" rx="1.5" fill="#fff"/>
+                        <path d="M20 4h16.5c7.5 0 13 5.3 13 12.6 0 7.3-5.5 12.6-13 12.6H27v13H20V4zm7 6.4v11.8h9c3.6 0 6-2.4 6-5.9s-2.4-5.9-6-5.9h-9z" fill="#fff"/>
+                        <text x="2" y="52" font-family="'Segoe UI', Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1.5" fill="#fff">SOLUTION</text>
+                    </g>
+                </svg>
+            </div>
+            <h1 class="resumo-cover-title">Levantamento de Atendimento</h1>
+            <p class="resumo-cover-sub">Formulário de Configuração da Plataforma</p>
+            <p class="resumo-cover-client" id="coverClientName"></p>
+            <p class="resumo-cover-date" id="coverDate"></p>
+            <div class="resumo-cover-stats" id="coverStats"></div>
+        </section>
+
+        <!-- 1. Filas -->
+        <section class="resumo-card">
+            <h2 class="resumo-section-title">1. Filas de Atendimento</h2>
+            <div id="secFilas"></div>
+        </section>
+
+        <!-- 2. Agentes -->
+        <section class="resumo-card">
+            <h2 class="resumo-section-title">2. Agentes</h2>
+            <div id="secAgentes"></div>
+        </section>
+
+        <!-- 3. Horários -->
+        <section class="resumo-card">
+            <h2 class="resumo-section-title">3. Horários de Atendimento</h2>
+            <div id="secHorarios"></div>
+        </section>
+
+        <!-- 4. Configurações -->
+        <section class="resumo-card">
+            <h2 class="resumo-section-title">4. Configurações Gerais</h2>
+            <div id="secConfig"></div>
+        </section>
+
+        <!-- 5. Números -->
+        <section class="resumo-card">
+            <h2 class="resumo-section-title">5. Números WhatsApp</h2>
+            <div id="secNumeros"></div>
+        </section>
+
+        <!-- 6. Agenda -->
+        <section class="resumo-card">
+            <h2 class="resumo-section-title">6. Agenda / Importação de Contatos</h2>
+            <div id="secAgenda"></div>
+        </section>
+
+        <!-- 7. Fluxo do BOT -->
+        <section class="resumo-card">
+            <h2 class="resumo-section-title">7. Fluxo do BOT</h2>
+            <div id="secBot"></div>
+        </section>
+
+        <footer class="resumo-footer">Levantamento de Onboarding · IP Solution</footer>
+    </main>
+
+    <div class="resumo-error no-print" id="resumoError" hidden>
+        <p id="resumoErrorMsg">Não foi possível carregar este levantamento.</p>
+        <a href="index.html" class="resumo-btn">Voltar ao formulário</a>
+    </div>
+
+    <script src="shared.js"></script>
+    <script src="resumo.js"></script>
+</body>
+</html>

@@ -6,3 +6,5 @@ backend/data/*.db
 backend/data/*.db-journal
 .env
 backend/.env
+backend/resumo_implantacao.pdf
+backend/erro-gerar-pdf.png
