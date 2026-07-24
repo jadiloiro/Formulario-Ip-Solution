@@ -201,12 +201,8 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
     z-index: 50;
     border-right: 1px solid var(--border-color);
     transition: width 0.28s cubic-bezier(0.4,0,0.2,1), transform 0.28s cubic-bezier(0.4,0,0.2,1);
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: thin;
+    overflow: hidden;
 }
-.sidebar::-webkit-scrollbar { width: 5px; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 /* Collapsed state — only icon visible */
 .sidebar.collapsed {
     width: 64px;
@@ -272,7 +268,19 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .sidebar-toggle:hover { background: var(--surface-hover); color: var(--primary-blue); }
 .sidebar-toggle i { transition: transform 0.25s ease; }
 
-.sidebar-menu { list-style: none; flex-shrink: 0; }
+/* flex:1 + min-height:0 fazem a lista ocupar só o espaço sobrando e rolar
+   internamente quando as 9 etapas não cabem — assim progresso e Jadibô
+   (fora desta lista, abaixo) ficam sempre 100% visíveis, sem precisar rolar. */
+.sidebar-menu {
+    list-style: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+}
+.sidebar-menu::-webkit-scrollbar { width: 5px; }
+.sidebar-menu::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 .sidebar-menu li {
     padding: 10px 12px;
     margin-bottom: 4px;
