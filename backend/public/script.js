@@ -7,9 +7,26 @@ const STORAGE = {
     STEP: 'currentStep',
     THEME: 'theme',
     DRAFT: 'ipsolution_form_draft',
+    DRAFT_OWNER: 'ipsolution_draft_owner',
     SHARED: 'ipsolution_shared_flow_data',
     ONBOARDING_TYPE: 'ipsolution_onboarding_type'
 };
+
+/* Id do usuário logado nesta página — usado para "carimbar" o rascunho local
+   (ver saveDraftNow/restoreDraft) e impedir que o progresso de um cliente
+   vaze pro próximo login, quando dois clientes usam o mesmo navegador/PC. */
+let currentUserId = null;
+
+/* Limpa todo o estado de rascunho guardado neste navegador (formulário, etapa
+   atual, fluxo do BOT). Usado tanto por "Excluir dados e reiniciar" quanto
+   quando detectamos que o rascunho salvo pertence a outra conta. */
+function clearLocalDraftKeys() {
+    localStorage.removeItem(STORAGE.STEP);
+    localStorage.removeItem(STORAGE.DRAFT);
+    localStorage.removeItem(STORAGE.DRAFT_OWNER);
+    localStorage.removeItem('ipsolution_flow_v2');
+    localStorage.removeItem(STORAGE.SHARED);
+}
 
 /* ========================= Portal de entrada: tipo de onboarding =========================
    Telefonia ainda não existe — só "WhatsApp" desbloqueia o formulário. A escolha fica salva
@@ -795,10 +812,7 @@ function resetAllData() {
     if (!ok) return;
 
     // Armazenamento
-    localStorage.removeItem(STORAGE.STEP);
-    localStorage.removeItem(STORAGE.DRAFT);
-    localStorage.removeItem('ipsolution_flow_v2');
-    localStorage.removeItem(STORAGE.SHARED);
+    clearLocalDraftKeys();
 
     // Campos e estado
     currentStep = 1;
@@ -1752,6 +1766,7 @@ function saveDraftNow() {
     try {
         const draft = collectDraft();
         localStorage.setItem(STORAGE.DRAFT, JSON.stringify(draft));
+        if (currentUserId) localStorage.setItem(STORAGE.DRAFT_OWNER, currentUserId);
         pushDraftToApi(draft); // backup no servidor quando a API está no ar
         const now = new Date();
         const hh = String(now.getHours()).padStart(2, '0');
@@ -1778,6 +1793,15 @@ function ensureRowCount(tbody, count, addFn) {
 }
 
 function restoreDraft() {
+    // Rascunho carimbado com outro usuário (ou sem carimbo, de antes desta checagem
+    // existir) — não é seguro assumir que é deste cliente. Descarta em vez de aplicar
+    // um progresso que pode ser de outra conta que usou este navegador antes.
+    const savedOwner = localStorage.getItem(STORAGE.DRAFT_OWNER);
+    if (localStorage.getItem(STORAGE.DRAFT) && savedOwner !== currentUserId) {
+        clearLocalDraftKeys();
+        return false;
+    }
+
     let draft;
     try {
         const raw = localStorage.getItem(STORAGE.DRAFT);
@@ -2091,6 +2115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // e a página (oculta desde o <head>) nunca chega a ser revelada.
     const authUser = await requireAuth();
     if (!authUser) return;
+    currentUserId = authUser.id;
 
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.addEventListener('click', logout);
