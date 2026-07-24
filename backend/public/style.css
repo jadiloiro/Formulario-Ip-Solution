@@ -27,6 +27,8 @@
     --logo-mark:   #002b5e;
     --logo-word:   #002b5e;
     --success: #1c8a4b;
+    --success-tint: rgba(28,138,75,0.08);
+    --orange-tint: rgba(232,93,4,0.08);
     --shadow: 0 4px 12px rgba(0,0,0,0.05);
     --shadow-strong: 0 12px 28px rgba(0,0,0,0.14);
     --accent-tint-08: rgba(0,43,94,0.08);
@@ -57,6 +59,8 @@
     --danger: #ff6b7a;
     --danger-tint: rgba(255,107,122,0.15);
     --success: #4ade80;
+    --success-tint: rgba(74,222,128,0.14);
+    --orange-tint: rgba(255,138,61,0.14);
     --shadow: 0 4px 14px rgba(0,0,0,0.45);
     --shadow-strong: 0 14px 32px rgba(0,0,0,0.55);
     --accent-tint-08: rgba(77,143,240,0.14);
@@ -664,38 +668,55 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .step-title { font-family: var(--font-display); font-size: 23px; font-weight: 600; letter-spacing: -0.01em; color: var(--primary-blue); margin-bottom: 5px; }
 .step-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
 
-/* Etapas ainda não implementadas (API Oficial, Templates) */
-.step-coming-soon {
+/* ================= Etapa 6 · API Oficial (triagem do ambiente Meta) ================= */
+.meta-resultado-hint { font-size: 13px; color: var(--text-muted); font-style: italic; margin-top: 4px; }
+.meta-resultado {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 14px;
-    padding: 60px 24px;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 20px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+    margin-top: 4px;
 }
-.step-coming-soon-icon {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: var(--accent-tint-08);
-    color: var(--primary-blue);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-}
-.step-coming-soon-badge {
+.meta-resultado-icon { font-size: 26px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+.meta-resultado-body { flex: 1; min-width: 0; }
+.meta-resultado-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.meta-resultado-body p { font-size: 13.5px; line-height: 1.6; color: var(--text-dark); margin-bottom: 10px; }
+.meta-resultado-email {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--surface);
+    border: 1px dashed var(--border-color-strong);
+    border-radius: 6px;
+    padding: 8px 12px;
     display: inline-block;
-    background: var(--action-orange);
-    color: var(--white);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 4px 12px;
-    border-radius: 20px;
 }
-.step-coming-soon-text { max-width: 420px; font-size: 13.5px; line-height: 1.6; color: var(--text-muted); }
+.meta-resultado-confirm { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; margin-top: 12px; margin-bottom: 0; }
+
+.meta-resultado-apto { background: var(--success-tint); border-color: var(--success); }
+.meta-resultado-apto .meta-resultado-icon,
+.meta-resultado-apto .meta-resultado-title,
+.meta-resultado-apto .meta-resultado-confirm { color: var(--success); }
+
+.meta-resultado-inapto { background: var(--orange-tint); border-color: var(--action-orange); }
+.meta-resultado-inapto .meta-resultado-icon,
+.meta-resultado-inapto .meta-resultado-title,
+.meta-resultado-inapto .meta-resultado-confirm { color: var(--action-orange); }
+
+.meta-inline-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: var(--primary-blue);
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.meta-inline-link:hover { color: var(--primary-blue-light); }
+.meta-inline-link:disabled { color: var(--text-muted); text-decoration: none; cursor: default; }
 
 /* ================= Etapa 7 · Templates ================= */
 .tpl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }

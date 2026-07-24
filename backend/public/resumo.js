@@ -188,9 +188,25 @@ function renderAgenda() {
     container.appendChild(el('p', { class: 'resumo-empty', text: 'Sem campos próprios — o arquivo de contatos anexado (se houver) aparece na seção Anexos, abaixo.' }));
 }
 
-function renderApiOficial() {
+function renderApiOficial(draft) {
+    const mt = draft.metaTriagem || {};
     const container = document.getElementById('secApiOficial');
-    container.appendChild(el('p', { class: 'resumo-empty', text: 'Etapa ainda em desenvolvimento nesta versão do formulário — sem configuração para exibir.' }));
+    if (!mt.redesSociais && !mt.businessSuite && !mt.verificacao) {
+        container.appendChild(el('p', { class: 'resumo-empty', text: 'Triagem do ambiente Meta ainda não respondida.' }));
+        return;
+    }
+
+    const simNao = (v) => (v === 'sim' ? 'Sim' : v === 'nao' ? 'Não' : v === 'nao_sei' ? 'Não sei' : '—');
+    container.appendChild(fieldBlock('Redes sociais (Facebook/Instagram) vinculadas', simNao(mt.redesSociais)));
+    container.appendChild(fieldBlock('Responsável pela gestão das redes', mt.redesGestor || 'Não informado'));
+    container.appendChild(fieldBlock('Possui Meta Business Suite', simNao(mt.businessSuite)));
+    container.appendChild(fieldBlock('Verificação da Empresa (Business Verification)', simNao(mt.verificacao)));
+
+    const apto = mt.redesSociais === 'sim' && mt.businessSuite === 'sim' && mt.verificacao === 'sim';
+    container.appendChild(el('div', { class: 'resumo-subtitle', text: 'Resultado da triagem' }));
+    container.appendChild(fieldBlock('Status', apto
+        ? (mt.conviteEnviado ? 'Ambiente pronto — convite de acesso ao Business Suite marcado como enviado' : 'Ambiente pronto — aguardando envio do convite de acesso')
+        : (mt.contatoSolicitado ? 'Pendências no ambiente — cliente solicitou contato da Implantação' : 'Pendências no ambiente — Implantação vai entrar em contato')));
 }
 
 /* Substitui {{1}}, {{2}}... pelo exemplo cadastrado — mesmo padrão da prévia da Etapa 7 (script.js) */
@@ -327,7 +343,7 @@ async function loadResumo() {
     renderHorarios(draft);
     renderConfig(draft);
     renderNumeros(draft);
-    renderApiOficial();
+    renderApiOficial(draft);
     renderTemplates(draft);
     renderAgenda();
     renderBot(draft);

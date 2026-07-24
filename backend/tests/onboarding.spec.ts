@@ -93,9 +93,16 @@ test.describe('Onboarding — caminho feliz até o resumo final', () => {
     await page.fill('#numeroPrincipal', '11 98888-7777');
     await page.click('#btnNext');
 
-    // Etapa 6 — API Oficial: só um card "Em breve", sem campos.
+    // Etapa 6 — API Oficial: triagem do ambiente Meta (cenário "apto" — as 3 respostas em "sim").
     await page.waitForSelector('#step6:not(.hidden)');
-    await expect(page.locator('#step6 .step-coming-soon-badge')).toHaveText('Em breve');
+    await page.check('#step6 input[name="metaRedes"][value="sim"]');
+    await page.fill('#metaGestor', 'Ana Souza (agência XPTO)');
+    await page.check('#step6 input[name="metaBusinessSuite"][value="sim"]');
+    await page.check('#step6 input[name="metaVerificacao"][value="sim"]');
+    await expect(page.locator('#metaResultadoApto')).toBeVisible();
+    await expect(page.locator('#metaResultadoInapto')).toBeHidden();
+    await page.click('#metaConviteBtn');
+    await expect(page.locator('#metaConviteConfirm')).toBeVisible();
     await page.click('#btnNext');
 
     // Etapa 7 — Templates: cria um modelo usando o botão "+ Adicionar variável"

@@ -556,18 +556,71 @@
                 </div>
             </div>
 
-            <!-- STEP 6: API OFICIAL (em breve) -->
+            <!-- STEP 6: API OFICIAL — Triagem do ambiente Meta antes da implantação -->
             <div class="form-card step-content hidden" id="step6">
                 <div class="step-header">
                     <div class="step-header-text">
                         <h2 class="step-title">6. API Oficial</h2>
-                        <p class="step-desc">Conexão direta com a API oficial do WhatsApp Business (Meta), sem depender de gateways de terceiros.</p>
+                        <p class="step-desc">Antes de conectar a API oficial do WhatsApp Business (Meta), precisamos checar se o ambiente da sua empresa lá já está pronto.</p>
                     </div>
                 </div>
-                <div class="step-coming-soon">
-                    <div class="step-coming-soon-icon"><i class="fa-solid fa-plug"></i></div>
-                    <span class="step-coming-soon-badge">Em breve</span>
-                    <p class="step-coming-soon-text">Estamos preparando a configuração da API Oficial por aqui. Em breve você vai poder conectar direto com a Meta nesta etapa.</p>
+
+                <fieldset class="form-group radio-fieldset">
+                    <legend>Você possui página no Facebook e perfil no Instagram ativos e vinculados?</legend>
+                    <div class="radio-group">
+                        <label class="cfg4-radio"><input type="radio" name="metaRedes" value="sim"> <span>Sim</span></label>
+                        <label class="cfg4-radio"><input type="radio" name="metaRedes" value="nao"> <span>Não</span></label>
+                    </div>
+                </fieldset>
+
+                <div class="form-group">
+                    <label for="metaGestor">Quem é a pessoa ou agência responsável por gerenciar essas redes sociais atualmente?</label>
+                    <p class="field-hint field-hint-lead">Nome (e um contato, se puder) de quem cuida das redes hoje — usamos isso se precisarmos falar diretamente com essa pessoa.</p>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-user input-icon"></i>
+                        <input id="metaGestor" type="text" class="form-control has-icon" placeholder="Ex: Ana Souza (agência XPTO) — (11) 98888-7777">
+                    </div>
+                </div>
+
+                <fieldset class="form-group radio-fieldset">
+                    <legend>Você já possui uma conta criada no Meta Business Suite (Gerenciador de Negócios)?</legend>
+                    <div class="radio-group">
+                        <label class="cfg4-radio"><input type="radio" name="metaBusinessSuite" value="sim"> <span>Sim</span></label>
+                        <label class="cfg4-radio"><input type="radio" name="metaBusinessSuite" value="nao"> <span>Não</span></label>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-group radio-fieldset">
+                    <legend>O seu Meta Business Suite já passou pelo processo de Verificação da Empresa (Business Verification)?</legend>
+                    <div class="radio-group">
+                        <label class="cfg4-radio"><input type="radio" name="metaVerificacao" value="sim"> <span>Sim</span></label>
+                        <label class="cfg4-radio"><input type="radio" name="metaVerificacao" value="nao"> <span>Não</span></label>
+                        <label class="cfg4-radio"><input type="radio" name="metaVerificacao" value="nao_sei"> <span>Não sei</span></label>
+                    </div>
+                </fieldset>
+
+                <!-- Resultado da triagem: só um dos três aparece, conforme as respostas acima -->
+                <p class="meta-resultado-hint" id="metaResultadoHint">Responda as três perguntas acima para ver o próximo passo.</p>
+
+                <div class="meta-resultado meta-resultado-apto hidden" id="metaResultadoApto">
+                    <div class="meta-resultado-icon"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="meta-resultado-body">
+                        <h3 class="meta-resultado-title">Ótimo! Seu ambiente está pronto.</h3>
+                        <p>Para prosseguirmos, acesse o seu Meta Business Suite, vá em <strong>"Configurações do Negócio" &gt; "Pessoas"</strong> (ou Parceiros) e envie um convite com permissão administrativa para o e-mail:</p>
+                        <p class="meta-resultado-email">admin@dratelecom.com.br</p>
+                        <p>Assim que enviar, clique no botão "Convite Enviado" abaixo.</p>
+                        <button type="button" class="btn btn-primary" id="metaConviteBtn">Convite Enviado</button>
+                        <p class="meta-resultado-confirm hidden" id="metaConviteConfirm"><i class="fa-solid fa-check"></i> Marcado como enviado — nossa equipe vai confirmar o acesso.</p>
+                    </div>
+                </div>
+
+                <div class="meta-resultado meta-resultado-inapto hidden" id="metaResultadoInapto">
+                    <div class="meta-resultado-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="meta-resultado-body">
+                        <h3 class="meta-resultado-title">Faltam algumas configurações</h3>
+                        <p>Notamos que faltam algumas configurações no seu ambiente da Meta para prosseguirmos com a ativação da API Oficial. Não se preocupe! Nossa equipe entrará em contato com o responsável informado para ajudar a regularizar tudo, ou se preferir, <button type="button" class="meta-inline-link" id="metaFalarBtn">clique aqui</button> para falar conosco agora.</p>
+                        <p class="meta-resultado-confirm hidden" id="metaFalarConfirm"><i class="fa-solid fa-check"></i> Recebido — nossa equipe vai entrar em contato em breve.</p>
+                    </div>
                 </div>
             </div>
 

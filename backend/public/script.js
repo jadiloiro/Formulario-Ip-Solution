@@ -169,9 +169,11 @@ const stepHelp = {
         ]
     },
     6: {
-        conceito: "Conexão direta com a API oficial do WhatsApp Business (Meta), sem depender de gateways de terceiros.",
+        conceito: "Antes de conectar a API oficial da Meta, fazemos uma triagem rápida do ambiente da sua empresa lá (redes sociais, Business Suite e verificação).",
         dicas: [
-            "Essa etapa ainda está em desenvolvimento — em breve você vai poder configurar a conexão por aqui."
+            "Se seu Instagram/Facebook ainda não estão vinculados, isso costuma ser o primeiro passo a resolver.",
+            "O Meta Business Suite é o \"gerenciador de negócios\" da Meta — não confundir com o app comum do Instagram/Facebook.",
+            "A Verificação da Empresa (Business Verification) pode levar alguns dias — vale iniciar esse processo o quanto antes."
         ]
     },
     7: {
@@ -197,6 +199,55 @@ const stepHelp = {
         ]
     }
 };
+
+/* ========================= Etapa 6 · API Oficial (triagem do ambiente Meta) =========================
+   Só descreve/decide o próximo passo em tela — não integra de fato com a Meta.
+   "Apto" (as 3 perguntas em "sim") mostra o convite pro Business Suite; qualquer
+   "não" (ou "não sei" na verificação) mostra o encaminhamento pra Implantação. */
+let metaConviteEnviado = false;
+let metaContatoSolicitado = false;
+
+function metaTriagemEvaluate() {
+    const redes = document.querySelector('input[name="metaRedes"]:checked');
+    const business = document.querySelector('input[name="metaBusinessSuite"]:checked');
+    const verificacao = document.querySelector('input[name="metaVerificacao"]:checked');
+
+    if (!redes || !business || !verificacao) {
+        toggleField('metaResultadoHint', true);
+        toggleField('metaResultadoApto', false);
+        toggleField('metaResultadoInapto', false);
+        return;
+    }
+
+    const apto = redes.value === 'sim' && business.value === 'sim' && verificacao.value === 'sim';
+    toggleField('metaResultadoHint', false);
+    toggleField('metaResultadoApto', apto);
+    toggleField('metaResultadoInapto', !apto);
+}
+
+function setupMetaTriagemStep() {
+    document.querySelectorAll('input[name="metaRedes"], input[name="metaBusinessSuite"], input[name="metaVerificacao"]')
+        .forEach(radio => radio.addEventListener('change', () => { metaTriagemEvaluate(); scheduleDraftSave(); }));
+
+    const conviteBtn = document.getElementById('metaConviteBtn');
+    if (conviteBtn) conviteBtn.addEventListener('click', () => {
+        metaConviteEnviado = true;
+        conviteBtn.disabled = true;
+        conviteBtn.textContent = 'Convite marcado como enviado ✔';
+        toggleField('metaConviteConfirm', true);
+        scheduleDraftSave();
+        showToast('Marcado! Nossa equipe vai confirmar o acesso assim que possível.', 'success');
+    });
+
+    const falarBtn = document.getElementById('metaFalarBtn');
+    if (falarBtn) falarBtn.addEventListener('click', () => {
+        metaContatoSolicitado = true;
+        falarBtn.disabled = true;
+        toggleField('metaFalarConfirm', true);
+        scheduleDraftSave();
+        showToast('Recebido! Nossa equipe vai entrar em contato em breve.', 'success');
+    });
+}
 
 /* ========================= Etapa 7 · Templates =========================
    Cada card já é o "registro salvo" (nome + categoria + mensagem + botões) —
@@ -841,6 +892,17 @@ function resetAllData() {
             updateMsgPreview(cfg.id);
         });
     }
+
+    // Triagem Meta (Passo 6) volta ao estado inicial — radios já foram limpos pelo form.reset()
+    metaConviteEnviado = false;
+    metaContatoSolicitado = false;
+    const conviteBtn = document.getElementById('metaConviteBtn');
+    if (conviteBtn) { conviteBtn.disabled = false; conviteBtn.textContent = 'Convite Enviado'; }
+    const falarBtn = document.getElementById('metaFalarBtn');
+    if (falarBtn) falarBtn.disabled = false;
+    toggleField('metaConviteConfirm', false);
+    toggleField('metaFalarConfirm', false);
+    if (typeof metaTriagemEvaluate === 'function') metaTriagemEvaluate();
 
     // Horários (Passo 3) voltam ao horário comercial padrão
     if (typeof renderScheduleDays === 'function') renderScheduleDays(defaultScheduleState());
@@ -1743,6 +1805,16 @@ function collectDraft() {
             ura: getRadio('ura'),
             uraResponsavel: (document.getElementById('uraResponsavel') || {}).value || ''
         },
+        // Triagem do ambiente Meta — decide em tela qual dos dois encaminhamentos mostrar
+        // (ver metaTriagemEvaluate), mas quem realmente conta pro CRM/Implantação é este objeto.
+        metaTriagem: {
+            redesSociais: getRadio('metaRedes'),
+            redesGestor: (document.getElementById('metaGestor') || {}).value || '',
+            businessSuite: getRadio('metaBusinessSuite'),
+            verificacao: getRadio('metaVerificacao'),
+            conviteEnviado: metaConviteEnviado,
+            contatoSolicitado: metaContatoSolicitado
+        },
         // Templates: mantidos em memória (templatesState), não em inputs soltos no DOM
         // — cada card já É o registro salvo, ver renderTemplates()/saveTemplateFromForm().
         templates: { itens: templatesState },
@@ -1898,6 +1970,30 @@ function restoreDraft() {
         const uraResp = document.getElementById('uraResponsavel');
         if (uraResp) uraResp.value = draft.numeros.uraResponsavel || '';
         toggleField('uraResponsavelWrap', draft.numeros.ura === 'sim');
+    }
+
+    // Passo 6 — API Oficial (triagem do ambiente Meta)
+    if (draft.metaTriagem) {
+        const mt = draft.metaTriagem;
+        setRadio('metaRedes', mt.redesSociais);
+        const gestor = document.getElementById('metaGestor');
+        if (gestor) gestor.value = mt.redesGestor || '';
+        setRadio('metaBusinessSuite', mt.businessSuite);
+        setRadio('metaVerificacao', mt.verificacao);
+
+        metaConviteEnviado = !!mt.conviteEnviado;
+        metaContatoSolicitado = !!mt.contatoSolicitado;
+        if (metaConviteEnviado) {
+            const btn = document.getElementById('metaConviteBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Convite marcado como enviado ✔'; }
+            toggleField('metaConviteConfirm', true);
+        }
+        if (metaContatoSolicitado) {
+            const btn = document.getElementById('metaFalarBtn');
+            if (btn) btn.disabled = true;
+            toggleField('metaFalarConfirm', true);
+        }
+        metaTriagemEvaluate();
     }
 
     // Passo 7 — Templates
@@ -2164,6 +2260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupStep4Interactions();
     setupConfigAccordion();
     cfg4InitInteractions(); // sub-passos + prévia em tempo real
+    setupMetaTriagemStep(); // Passo 6 — listeners dos radios/botões da triagem Meta
     setupTemplatesStep(); // Passo 7 — precisa existir antes de restoreDraft popular templatesState
     document.getElementById('addRespostaBtn').addEventListener('click', () => addRespostaRow());
     document.getElementById('respostasTableBody').addEventListener('click', (e) => {
