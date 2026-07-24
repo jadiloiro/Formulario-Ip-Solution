@@ -632,6 +632,10 @@ async function fetchAttachments() {
     }
 }
 
+// Mesmo limite do backend (attachments.service.ts) — repetido aqui só para dar
+// feedback imediato na tela; quem garante de verdade é o servidor.
+const MAX_ANEXOS_POR_ETAPA = 5;
+
 async function renderAttachments(step) {
     const list = document.getElementById('attachList');
     const badge = document.getElementById('attachBadge');
@@ -640,6 +644,19 @@ async function renderAttachments(step) {
     const all = await fetchAttachments();
     const files = all.filter(f => f.stepNumber === step);
     list.innerHTML = '';
+
+    const count = document.getElementById('attachCount');
+    const dropzone = document.getElementById('attachDropzone');
+    const dropzoneText = document.getElementById('attachDropzoneText');
+    const input = document.getElementById('attachInput');
+    const noLimite = files.length >= MAX_ANEXOS_POR_ETAPA;
+    if (count) count.textContent = `${files.length}/${MAX_ANEXOS_POR_ETAPA}`;
+    if (count) count.classList.toggle('attach-count-full', noLimite);
+    if (dropzone) dropzone.classList.toggle('attach-dropzone-disabled', noLimite);
+    if (input) input.disabled = noLimite;
+    if (dropzoneText) dropzoneText.textContent = noLimite
+        ? `Limite de ${MAX_ANEXOS_POR_ETAPA} arquivos atingido — remova algum para anexar outro`
+        : 'Clique ou arraste arquivos aqui';
 
     if (files.length === 0) {
         const empty = document.createElement('p');
@@ -676,11 +693,29 @@ async function renderAttachments(step) {
 }
 
 async function addAttachments(step, fileList) {
+    // Captura os arquivos JÁ aqui, de forma síncrona: fileList costuma ser o FileList
+    // "ao vivo" do próprio <input>, e o handler de 'change' zera esse input logo em
+    // seguida (attachInput.value = '') — se isso rodasse antes de qualquer await desta
+    // função, a lista ficava vazia quando a gente finalmente fosse lê-la.
+    const todosArquivos = Array.from(fileList);
+
     if (!apiCtx.available || !apiCtx.submissionId) {
         showToast('Sem conexão com o servidor — não foi possível anexar o arquivo.', 'error');
         return;
     }
-    const files = Array.from(fileList);
+
+    const jaAnexados = (await fetchAttachments()).filter(f => f.stepNumber === step).length;
+    const vagas = MAX_ANEXOS_POR_ETAPA - jaAnexados;
+    if (vagas <= 0) {
+        showToast(`Limite de ${MAX_ANEXOS_POR_ETAPA} arquivos por etapa atingido. Remova algum anexo antes de enviar outro.`, 'error');
+        return;
+    }
+
+    const files = todosArquivos.slice(0, vagas);
+    if (todosArquivos.length > vagas) {
+        showToast(`Só cabem mais ${vagas} arquivo(s) nesta etapa (limite de ${MAX_ANEXOS_POR_ETAPA}) — os demais não foram enviados.`, 'error');
+    }
+
     let ok = 0;
     for (const file of files) {
         const formData = new FormData();
@@ -857,6 +892,28 @@ function toggleField(elementId, show) {
     else el.classList.add('hidden');
 }
 
+/* Passo 5 · Número principal: aceitava qualquer caractere e qualquer tamanho.
+   Agora só deixa passar dígitos e a pontuação comum de telefone (espaço, (), -, +),
+   e avisa (sem bloquear o avanço) quando a quantidade de dígitos foge do padrão
+   brasileiro — DDD + número, 10 (fixo) ou 11 (celular) dígitos. */
+function setupNumeroPrincipalValidation() {
+    const input = document.getElementById('numeroPrincipal');
+    const hint = document.getElementById('numeroPrincipalHint');
+    if (!input || !hint) return;
+
+    input.addEventListener('input', () => {
+        const sanitized = input.value.replace(/[^\d\s()+-]/g, '');
+        if (sanitized !== input.value) input.value = sanitized;
+
+        const digitos = sanitized.replace(/\D/g, '').length;
+        if (digitos === 0 || (digitos >= 10 && digitos <= 11)) {
+            hint.textContent = '';
+        } else {
+            hint.textContent = 'Confira o número: DDD + telefone costuma ter 10 ou 11 dígitos.';
+        }
+    });
+}
+
 /* ========================= Reiniciar preenchimento ========================= */
 function resetAllData() {
     const ok = confirm('Isso apaga TUDO que foi preenchido (filas, agentes, configurações, fluxo do BOT) e recomeça do zero. Deseja continuar?');
@@ -882,6 +939,7 @@ function resetAllData() {
     resetTbody('botOpcoesTableBody');
     resetTbody('respostasTableBody', 0);
     if (typeof refreshRespostasTableVisibility === 'function') refreshRespostasTableVisibility();
+    document.querySelectorAll('.sugestao-chip').forEach(chip => { chip.disabled = false; });
 
     // Multi-selects e prévias das mensagens voltam ao padrão
     document.querySelectorAll('.multi-select').forEach(ms => ms.setAttribute('data-selected', '[]'));
@@ -1416,12 +1474,27 @@ function renderSugestaoChips() {
         chip.type = 'button';
         chip.className = 'sugestao-chip';
         chip.textContent = s.titulo;
+        chip.dataset.sugestaoIdx = String(i);
         chip.addEventListener('click', () => {
-            addRespostaRow(s.titulo, s.texto, true);
-            chip.disabled = true; // evita duplicar a mesma sugestão sem querer
+            const tr = addRespostaRow(s.titulo, s.texto, true);
+            tr.dataset.sugestaoIdx = String(i); // evita duplicar a mesma sugestão sem querer...
+            chip.disabled = true; // ...mas reabilitada em removeRespostaRow() se a linha for excluída
         });
         wrap.appendChild(chip);
     });
+}
+
+/* Reabilita o chip de sugestão correspondente (se houver) antes de remover a linha —
+   senão, uma vez usada, a sugestão nunca mais podia ser adicionada de novo na mesma sessão. */
+function removeRespostaRow(tr) {
+    const idx = tr.dataset.sugestaoIdx;
+    if (idx !== undefined) {
+        const chip = document.querySelector(`.sugestao-chip[data-sugestao-idx="${idx}"]`);
+        if (chip) chip.disabled = false;
+    }
+    tr.remove();
+    refreshRespostasTableVisibility();
+    scheduleDraftSave();
 }
 
 function refreshRespostasTableVisibility() {
@@ -1796,7 +1869,10 @@ function collectDraft() {
             }, {}),
             respostasRapidas: Array.from(document.querySelectorAll('#respostasTableBody tr')).map(tr => ({
                 titulo: tr.querySelector('.resposta-titulo').value,
-                texto: tr.querySelector('.resposta-texto').value
+                texto: tr.querySelector('.resposta-texto').value,
+                // Qual chip de sugestão originou esta linha (ver renderSugestaoChips/removeRespostaRow) —
+                // sem isso, restaurar o rascunho não sabia reabilitar/desabilitar os chips corretamente.
+                sugestaoIdx: tr.dataset.sugestaoIdx !== undefined ? Number(tr.dataset.sugestaoIdx) : null
             }))
         },
         numeros: {
@@ -1955,9 +2031,17 @@ function restoreDraft() {
             });
         }
 
-        // Respostas rápidas
+        // Respostas rápidas — reaplica o vínculo com o chip de sugestão (se veio de uma)
+        // para o chip continuar desabilitado e não permitir duplicar a mesma sugestão.
         if (Array.isArray(c.respostasRapidas)) {
-            c.respostasRapidas.forEach(r => addRespostaRow(r.titulo, r.texto, false));
+            c.respostasRapidas.forEach(r => {
+                const tr = addRespostaRow(r.titulo, r.texto, false);
+                if (r.sugestaoIdx != null) {
+                    tr.dataset.sugestaoIdx = String(r.sugestaoIdx);
+                    const chip = document.querySelector(`.sugestao-chip[data-sugestao-idx="${r.sugestaoIdx}"]`);
+                    if (chip) chip.disabled = true;
+                }
+            });
         }
     }
 
@@ -2265,11 +2349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('addRespostaBtn').addEventListener('click', () => addRespostaRow());
     document.getElementById('respostasTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-delete');
-        if (btn) {
-            btn.closest('tr').remove();
-            refreshRespostasTableVisibility();
-            scheduleDraftSave();
-        }
+        if (btn) removeRespostaRow(btn.closest('tr'));
     });
 
     // Seletor visual de horários do Passo 3 também precisa existir antes de restaurar o rascunho
@@ -2296,6 +2376,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('input[name="ura"]').forEach(radio => {
         radio.addEventListener('change', () => toggleField('uraResponsavelWrap', radio.value === 'sim' && radio.checked));
     });
+    setupNumeroPrincipalValidation();
 
     // Delegação de eventos: um listener por tabela cobre todas as linhas, atuais e futuras
     document.getElementById('filasTableBody').addEventListener('click', (e) => {

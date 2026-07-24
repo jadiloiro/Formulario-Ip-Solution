@@ -52,6 +52,7 @@ describe('AttachmentsService', () => {
             find: jest.fn(),
             findOneBy: jest.fn(),
             remove: jest.fn(),
+            count: jest.fn().mockResolvedValue(0),
           },
         },
         { provide: SubmissionsService, useValue: submissionsService },
@@ -101,6 +102,19 @@ describe('AttachmentsService', () => {
       mimeType: 'text/csv',
       size: 42,
     });
+  });
+
+  it('upload() recusa quando a etapa já atingiu o limite de arquivos', async () => {
+    repo.count.mockResolvedValue(5);
+    const file = {
+      originalname: 'mais-um.csv',
+      mimetype: 'text/csv',
+      size: 10,
+      buffer: Buffer.from('a'),
+    } as Express.Multer.File;
+
+    await expect(service.upload('sub-1', cliente(), file, 6)).rejects.toThrow(BadRequestException);
+    expect(repo.save).not.toHaveBeenCalled();
   });
 
   it('getForDownload() lança 404 quando o anexo não pertence ao levantamento', async () => {

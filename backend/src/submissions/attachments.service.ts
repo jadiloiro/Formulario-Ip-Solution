@@ -12,6 +12,10 @@ import { AuthUser } from '../auth/types/auth-user.interface';
  *  (arquivo de cliente é dado sensível; só sai por download autenticado). */
 const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 
+/** Limite por etapa (não pelo total da submissão) — o painel "Anexos" é sempre
+ *  filtrado por etapa, então é ali que o cliente percebe a contagem. */
+const MAX_FILES_PER_STEP = 5;
+
 @Injectable()
 export class AttachmentsService {
   constructor(
@@ -33,6 +37,13 @@ export class AttachmentsService {
   ): Promise<Attachment> {
     await this.submissionsService.findOneForUser(submissionId, user);
     if (!file) throw new BadRequestException('Nenhum arquivo enviado');
+
+    if (stepNumber != null) {
+      const countInStep = await this.repo.count({ where: { submissionId, stepNumber } });
+      if (countInStep >= MAX_FILES_PER_STEP) {
+        throw new BadRequestException(`Limite de ${MAX_FILES_PER_STEP} arquivos por etapa atingido`);
+      }
+    }
 
     const dir = path.join(UPLOAD_ROOT, submissionId);
     fs.mkdirSync(dir, { recursive: true });

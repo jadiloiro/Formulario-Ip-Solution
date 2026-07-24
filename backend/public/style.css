@@ -611,6 +611,19 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 
 /* Anexos */
 .toolbar-panel-anexos { min-width: 280px; }
+.toolbar-panel-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.toolbar-panel-title-row .toolbar-panel-title { margin-bottom: 0; }
+.attach-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-light);
+    border-radius: 10px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+}
+.attach-count-full { color: var(--action-orange); background: var(--danger-tint); }
 .attach-dropzone {
     display: flex;
     flex-direction: column;
@@ -629,6 +642,13 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .attach-dropzone:hover { background: var(--surface-hover); }
 .attach-dropzone.dragover { background: var(--accent-tint-15); border-color: var(--action-orange); }
 .attach-dropzone-icon { font-size: 20px; }
+.attach-dropzone-disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    border-color: var(--border-color-strong);
+    color: var(--text-muted);
+}
+.attach-dropzone-disabled:hover { background: var(--bg-light); }
 
 .attach-list { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; }
 .attach-list li {

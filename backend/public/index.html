@@ -196,10 +196,13 @@
             <div class="toolbar-item">
                 <button type="button" class="toolbar-trigger">📎 <span>Anexos</span><span class="attach-badge hidden" id="attachBadge">0</span></button>
                 <div class="toolbar-panel toolbar-panel-anexos">
-                    <strong class="toolbar-panel-title">Anexar arquivos desta etapa</strong>
-                    <label class="attach-dropzone" for="attachInput">
+                    <div class="toolbar-panel-title-row">
+                        <strong class="toolbar-panel-title">Anexar arquivos desta etapa</strong>
+                        <span class="attach-count" id="attachCount">0/5</span>
+                    </div>
+                    <label class="attach-dropzone" for="attachInput" id="attachDropzone">
                         <span class="attach-dropzone-icon">📎</span>
-                        <span>Clique ou arraste arquivos aqui</span>
+                        <span id="attachDropzoneText">Clique ou arraste arquivos aqui</span>
                         <input type="file" id="attachInput" multiple hidden>
                     </label>
                     <ul class="attach-list" id="attachList"></ul>
@@ -527,8 +530,9 @@
                     <label for="numeroPrincipal">Qual será o número principal? (Ex: 11 99999-9999)</label>
                     <div class="input-icon-wrap">
                         <i class="fa-brands fa-whatsapp input-icon input-icon-wa"></i>
-                        <input id="numeroPrincipal" type="text" class="form-control has-icon" placeholder="Número com DDD" inputmode="tel" autocomplete="tel-national">
+                        <input id="numeroPrincipal" type="text" class="form-control has-icon" placeholder="Número com DDD" inputmode="tel" autocomplete="tel-national" maxlength="20">
                     </div>
+                    <p class="field-hint" id="numeroPrincipalHint"></p>
                 </div>
                 <fieldset class="form-group radio-fieldset">
                     <legend>Esse número já está ativo (em uso hoje)?</legend>
