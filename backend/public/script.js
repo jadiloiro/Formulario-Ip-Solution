@@ -674,6 +674,32 @@ function setupSidebarTooltips() {
         });
         li.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
     });
+
+    // Mesmo tooltip pro gráfico de pizza — recolhida, ele perde o rótulo de texto ao lado
+    const progressEl = document.querySelector('.sidebar-progress');
+    if (progressEl) {
+        progressEl.addEventListener('mouseenter', () => {
+            if (!sidebar || !sidebar.classList.contains('collapsed')) return;
+            const label = document.getElementById('progressLabel');
+            const percent = document.getElementById('progressPercent');
+            tooltip.innerHTML = '';
+            if (label) {
+                const strong = document.createElement('strong');
+                strong.textContent = label.textContent;
+                tooltip.appendChild(strong);
+            }
+            if (percent) {
+                const span = document.createElement('span');
+                span.textContent = percent.textContent;
+                tooltip.appendChild(span);
+            }
+            const rect = progressEl.getBoundingClientRect();
+            tooltip.style.top = `${rect.top + rect.height / 2}px`;
+            tooltip.style.left = `${rect.right + 12}px`;
+            tooltip.classList.add('visible');
+        });
+        progressEl.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+    }
 }
 
 /* ========================= Validação ========================= */

@@ -201,8 +201,12 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
     z-index: 50;
     border-right: 1px solid var(--border-color);
     transition: width 0.28s cubic-bezier(0.4,0,0.2,1), transform 0.28s cubic-bezier(0.4,0,0.2,1);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
 }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 /* Collapsed state — only icon visible */
 .sidebar.collapsed {
     width: 64px;
@@ -211,8 +215,12 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .sidebar.collapsed .menu-text,
 .sidebar.collapsed .menu-sub,
 .sidebar.collapsed .menu-label,
-.sidebar.collapsed .sidebar-progress,
 .sidebar.collapsed .sidebar-bot { display: none; }
+/* Recolhida: mantém só o gráfico de pizza (sem rótulo), centralizado no lugar do ícone */
+.sidebar.collapsed .sidebar-progress { justify-content: center; margin: 10px 0; padding: 0; }
+.sidebar.collapsed .sidebar-progress-label { display: none; }
+.sidebar.collapsed .progress-pie { width: 34px; height: 34px; }
+.sidebar.collapsed .progress-pie-pct { font-size: 8.5px; }
 .sidebar.collapsed .sidebar-menu li { justify-content: center; padding: 12px 0; }
 .sidebar.collapsed .menu-icon { margin: 0; font-size: 17px; }
 .sidebar.collapsed .logo-btn .logo-text { display: none; }
@@ -264,8 +272,7 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .sidebar-toggle:hover { background: var(--surface-hover); color: var(--primary-blue); }
 .sidebar-toggle i { transition: transform 0.25s ease; }
 
-/* Menu Lateral */
-.sidebar-menu { list-style: none; }
+.sidebar-menu { list-style: none; flex-shrink: 0; }
 .sidebar-menu li {
     padding: 10px 12px;
     margin-bottom: 4px;
@@ -325,7 +332,7 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .sidebar-tooltip span { color: var(--text-muted); }
 
 /* Progresso geral: gráfico de pizza (donut) + legenda em texto */
-.sidebar-progress { margin: 10px 0 20px; display: flex; align-items: center; gap: 12px; }
+.sidebar-progress { margin: 10px 0 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .progress-pie {
     --pct: 0;
     position: relative;
@@ -360,6 +367,7 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 /* Jadibô Sidebar */
 .sidebar-bot {
     margin-top: auto;
+    flex-shrink: 0;
     padding: 15px;
     background: var(--bg-light);
     border: 1px solid var(--border-color);
