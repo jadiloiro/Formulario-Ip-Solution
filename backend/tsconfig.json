@@ -15,5 +15,5 @@
     "strictNullChecks": true,
     "esModuleInterop": true
   },
-  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
+  "exclude": ["node_modules", "dist", "test", "tests", "playwright.config.ts", "**/*.spec.ts"]
 }

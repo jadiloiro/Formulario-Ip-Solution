@@ -183,10 +183,37 @@ function renderNumeros(draft) {
     }
 }
 
-function renderAgenda(draft) {
-    const agenda = draft.agenda || {};
+function renderAgenda() {
     const container = document.getElementById('secAgenda');
-    container.appendChild(fieldBlock('Arquivo CSV', agenda.csvNome || 'Não informado'));
+    container.appendChild(el('p', { class: 'resumo-empty', text: 'Sem campos próprios — o arquivo de contatos anexado (se houver) aparece na seção Anexos, abaixo.' }));
+}
+
+const STEP_LABELS = {
+    1: 'Filas', 2: 'Agentes', 3: 'Horários', 4: 'Configurações',
+    5: 'Números', 6: 'Agenda', 7: 'BOT',
+};
+
+function renderAnexos(attachments, submissionId) {
+    const container = document.getElementById('secAnexos');
+    if (!attachments.length) {
+        container.appendChild(el('p', { class: 'resumo-empty', text: 'Nenhum arquivo anexado neste levantamento.' }));
+        return;
+    }
+    const list = el('ul', { class: 'resumo-anexos-list' });
+    attachments.forEach(file => {
+        const li = el('li', { class: 'resumo-anexos-item' }, [
+            el('span', { class: 'resumo-anexos-step', text: STEP_LABELS[file.stepNumber] || `Etapa ${file.stepNumber}` }),
+            el('a', {
+                class: 'resumo-anexos-link',
+                href: `/api/submissions/${submissionId}/attachments/${file.id}/download`,
+                target: '_blank',
+                rel: 'noopener',
+                text: `📄 ${file.originalName}`,
+            }),
+        ]);
+        list.appendChild(li);
+    });
+    container.appendChild(list);
 }
 
 function renderBot(draft) {
@@ -271,8 +298,15 @@ async function loadResumo() {
     renderHorarios(draft);
     renderConfig(draft);
     renderNumeros(draft);
-    renderAgenda(draft);
+    renderAgenda();
     renderBot(draft);
+
+    let attachments = [];
+    try {
+        const attRes = await fetch(`/api/submissions/${id}/attachments`, { credentials: 'include' });
+        if (attRes.ok) attachments = await attRes.json();
+    } catch (e) { /* segue sem anexos — a seção mostra "nenhum arquivo" */ }
+    renderAnexos(attachments, id);
 
     document.getElementById('resumoStatus').textContent =
         submission.status === 'enviado' ? 'Levantamento enviado' : 'Rascunho';

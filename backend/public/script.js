@@ -372,56 +372,6 @@ async function addAttachments(step, fileList) {
     if (ok < files.length) showToast(`${files.length - ok} arquivo(s) falharam ao enviar.`, 'error');
 }
 
-/* ========================= Etapa 6: dropzone do CSV de contatos ========================= */
-function showCsvFile(name) {
-    const chip = document.getElementById('csvFileChip');
-    const label = document.getElementById('csvFileName');
-    if (!chip || !label) return;
-    label.textContent = name;
-    label.title = name;
-    chip.classList.remove('hidden');
-}
-
-function clearCsvFile() {
-    const input = document.getElementById('agendaCsvInput');
-    const chip = document.getElementById('csvFileChip');
-    const label = document.getElementById('csvFileName');
-    if (input) input.value = '';
-    if (label) label.textContent = '';
-    if (chip) chip.classList.add('hidden');
-    scheduleDraftSave();
-}
-
-function setupCsvDropzone() {
-    const zone = document.getElementById('csvDropzone');
-    const input = document.getElementById('agendaCsvInput');
-    const removeBtn = document.getElementById('csvFileRemove');
-    if (!zone || !input) return;
-
-    input.addEventListener('change', () => {
-        if (input.files.length > 0) {
-            showCsvFile(input.files[0].name);
-            scheduleDraftSave();
-        }
-    });
-
-    ['dragenter', 'dragover'].forEach(evt => {
-        zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.add('dragover'); });
-    });
-    ['dragleave', 'drop'].forEach(evt => {
-        zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.remove('dragover'); });
-    });
-    zone.addEventListener('drop', (e) => {
-        if (e.dataTransfer.files.length > 0) {
-            input.files = e.dataTransfer.files;
-            showCsvFile(input.files[0].name);
-            scheduleDraftSave();
-        }
-    });
-
-    if (removeBtn) removeBtn.addEventListener('click', (e) => { e.preventDefault(); clearCsvFile(); });
-}
-
 function updateProgress(step) {
     const done = completedSteps.size;
     const pct = Math.round((done / totalSteps) * 100);
@@ -1457,10 +1407,6 @@ function collectDraft() {
             ura: getRadio('ura'),
             uraResponsavel: (document.getElementById('uraResponsavel') || {}).value || ''
         },
-        agenda: {
-            // O navegador não permite restaurar o arquivo em si (só o nome fica salvo no rascunho)
-            csvNome: (document.getElementById('csvFileName') || {}).textContent || ''
-        },
         // O fluxo do BOT é editado visualmente no Passo 7 (motor Drawflow) e persistido
         // em localStorage pelo próprio editor — lemos daqui para o PDF refletir o que
         // o usuário realmente montou no quadro (e não um formulário legado escondido).
@@ -1603,11 +1549,6 @@ function restoreDraft() {
         const uraResp = document.getElementById('uraResponsavel');
         if (uraResp) uraResp.value = draft.numeros.uraResponsavel || '';
         toggleField('uraResponsavelWrap', draft.numeros.ura === 'sim');
-    }
-
-    // Passo 6 — Agenda (o arquivo em si não é restaurável pelo navegador, só o nome salvo)
-    if (draft.agenda && draft.agenda.csvNome) {
-        showCsvFile(draft.agenda.csvNome);
     }
 
     // Passo 7 — BOT
@@ -2030,9 +1971,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-
-    // Etapa 6 · Agenda: dropzone do CSV (clique ou arrastar-e-soltar)
-    setupCsvDropzone();
 
     // Fecha os dropdowns de multi-select ao clicar fora
     document.addEventListener('click', (e) => {

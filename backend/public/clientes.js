@@ -216,6 +216,19 @@ function renderGrid() {
     visible.forEach(client => grid.appendChild(buildCard(client)));
 }
 
+/**
+ * GET /submissions/current sempre devolve (ou cria) um rascunho pro usuário logado —
+ * inclusive um vazio, se ele só reabrir o formulário depois de já ter enviado (ex:
+ * "Voltar ao formulário" no resumo.html). Esse rascunho vazio fica com updatedAt mais
+ * recente que o levantamento enviado antes dele, então "pegar o mais recente" sem mais
+ * critério faz o painel esconder um envio real atrás de um rascunho em branco.
+ */
+function submissionRank(sub) {
+    if (sub.status === 'enviado') return 2;
+    const completedSteps = (sub.formData && sub.formData.completedSteps) || [];
+    return completedSteps.length > 0 ? 1 : 0;
+}
+
 async function loadClients() {
     const [usersRes, submissionsRes] = await Promise.all([
         fetch('/api/users', { credentials: 'include' }),
@@ -226,11 +239,19 @@ async function loadClients() {
     const users = await usersRes.json();
     const submissions = await submissionsRes.json();
 
-    // Mais recente por cliente representa o estado atual dele no painel.
+    // Por cliente: o envio/rascunho mais relevante (enviado > rascunho com progresso
+    // > rascunho vazio); entre dois do mesmo nível, o mais recente.
     const latestByUser = {};
     submissions.forEach(sub => {
         const current = latestByUser[sub.userId];
-        if (!current || new Date(sub.updatedAt) > new Date(current.updatedAt)) latestByUser[sub.userId] = sub;
+        if (!current) { latestByUser[sub.userId] = sub; return; }
+        const subRank = submissionRank(sub);
+        const currentRank = submissionRank(current);
+        if (subRank !== currentRank) {
+            if (subRank > currentRank) latestByUser[sub.userId] = sub;
+            return;
+        }
+        if (new Date(sub.updatedAt) > new Date(current.updatedAt)) latestByUser[sub.userId] = sub;
     });
 
     const clients = users.map(u => ({ ...u, submission: latestByUser[u.id] || null, attachments: [] }));
