@@ -117,13 +117,15 @@
             </li>
         </ul>
 
-        <!-- Barra de progresso geral -->
+        <!-- Progresso geral: gráfico de pizza (mais compacto que uma barra) -->
         <div class="sidebar-progress">
+            <div class="progress-pie" id="progressPie">
+                <span class="progress-pie-pct" id="progressPiePct">14%</span>
+            </div>
             <div class="sidebar-progress-label">
                 <span id="progressLabel">Etapa 1 de 7</span>
-                <span id="progressPercent">14%</span>
+                <span id="progressPercent">14% concluído</span>
             </div>
-            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
         </div>
 
         <div class="sidebar-bot">
@@ -144,35 +146,25 @@
                 <p class="header-sub">Leva cerca de 10 minutos — e seu progresso é salvo automaticamente, então pode parar e continuar quando quiser.</p>
             </div>
             <div class="header-actions">
-                <a href="clientes.html" class="btn-header-link" id="adminLink" hidden title="Área ADM (Implantação)">
-                    <i class="fa-solid fa-user-shield"></i> Área ADM
-                </a>
-                <button type="button" class="btn-back-gate" id="btnBackToGate" title="Voltar para escolher o tipo de onboarding (caso tenha selecionado errado)">
-                    <i class="fa-solid fa-arrow-left"></i> Trocar tipo de onboarding
-                </button>
-                <button type="button" class="theme-toggle" id="themeToggle" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
+                <button type="button" class="theme-toggle-btn" id="themeToggle" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
                     <span class="theme-toggle-icon">🌙</span>
-                    <span class="theme-toggle-label">Tema escuro</span>
                 </button>
-                <button type="button" class="btn-header-link" id="btnLogout" title="Sair da sua conta">
-                    <i class="fa-solid fa-right-from-bracket"></i> Sair
-                </button>
-                <button type="button" class="btn-reset-header" id="btnReset" title="Apagar todos os dados e recomeçar do zero">
-                    🗑 Excluir dados e reiniciar
-                </button>
+                <div class="header-menu" id="headerMenu">
+                    <button type="button" class="header-menu-trigger" id="headerMenuTrigger" aria-haspopup="true" aria-expanded="false" aria-label="Mais opções" title="Mais opções">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                    <div class="header-menu-panel hidden" id="headerMenuPanel" role="menu">
+                        <button type="button" class="header-menu-item" id="btnLogout" role="menuitem">
+                            <i class="fa-solid fa-right-from-bracket"></i> Sair
+                        </button>
+                        <div class="header-menu-divider" role="separator"></div>
+                        <button type="button" class="header-menu-item header-menu-item-danger" id="btnReset" role="menuitem" title="Apagar todos os dados e recomeçar do zero">
+                            <i class="fa-solid fa-trash"></i> Excluir dados e reiniciar
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
-
-        <!-- Top Wizard -->
-        <div class="top-wizard" id="topWizard">
-            <div class="wizard-step active" data-step="1"><div class="circle"><i class="fa-solid fa-layer-group"></i></div>Filas</div>
-            <div class="wizard-step" data-step="2"><div class="circle"><i class="fa-solid fa-users"></i></div>Agentes</div>
-            <div class="wizard-step" data-step="3"><div class="circle"><i class="fa-solid fa-clock"></i></div>Horários</div>
-            <div class="wizard-step" data-step="4"><div class="circle"><i class="fa-solid fa-sliders"></i></div>Configurações</div>
-            <div class="wizard-step" data-step="5"><div class="circle"><i class="fa-solid fa-mobile-screen"></i></div>Números</div>
-            <div class="wizard-step" data-step="6"><div class="circle"><i class="fa-solid fa-address-book"></i></div>Agenda</div>
-            <div class="wizard-step" data-step="7"><div class="circle"><i class="fa-solid fa-robot"></i></div>BOT</div>
-        </div>
 
         <!-- Step Toolbar: Conceito / Modelos / Dicas / Anexos -->
         <div class="step-toolbar" id="stepToolbar">

@@ -211,7 +211,7 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .sidebar.collapsed .menu-text,
 .sidebar.collapsed .menu-sub,
 .sidebar.collapsed .menu-label,
-.sidebar.collapsed .sidebar-progress-wrap,
+.sidebar.collapsed .sidebar-progress,
 .sidebar.collapsed .sidebar-bot { display: none; }
 .sidebar.collapsed .sidebar-menu li { justify-content: center; padding: 12px 0; }
 .sidebar.collapsed .menu-icon { margin: 0; font-size: 17px; }
@@ -298,11 +298,64 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .menu-label { font-size: 13px; font-weight: 600; line-height: 1.2; }
 .menu-sub   { font-size: 10.5px; opacity: 0.7; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; }
 
-/* Barra de progresso geral */
-.sidebar-progress { margin: 10px 0 20px; }
-.sidebar-progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-.progress-track { width: 100%; height: 6px; background: var(--bg-light); border-radius: 4px; overflow: hidden; }
-.progress-fill { height: 100%; width: 14%; background: linear-gradient(90deg, var(--primary-blue), var(--action-orange)); border-radius: 4px; transition: width 0.35s ease; }
+/* Tooltip flutuante com o resumo da etapa (sidebar recolhida — ver setupSidebarTooltips) */
+.sidebar-tooltip {
+    position: fixed;
+    transform: translateY(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-dark);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-strong);
+    font-size: 12.5px;
+    line-height: 1.4;
+    max-width: 220px;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sidebar-tooltip.visible { opacity: 1; visibility: visible; }
+.sidebar-tooltip strong { font-weight: 700; color: var(--primary-blue); }
+.sidebar-tooltip span { color: var(--text-muted); }
+
+/* Progresso geral: gráfico de pizza (donut) + legenda em texto */
+.sidebar-progress { margin: 10px 0 20px; display: flex; align-items: center; gap: 12px; }
+.progress-pie {
+    --pct: 0;
+    position: relative;
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary-blue) calc(var(--pct) * 1%), var(--bg-light) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.5s ease;
+}
+.progress-pie::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    background: var(--surface);
+}
+.progress-pie-pct {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--primary-blue);
+}
+.sidebar-progress-label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text-muted); min-width: 0; }
+.sidebar-progress-label #progressLabel { font-size: 12.5px; font-weight: 600; color: var(--text-dark); }
 
 /* Jadibô Sidebar */
 .sidebar-bot {
@@ -357,36 +410,86 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .theme-toggle:hover { background: var(--surface-hover); }
 .theme-toggle-icon { font-size: 15px; line-height: 1; }
 
-.btn-back-gate {
+/* Botão de tema no cabeçalho do onboarding: ícone só, redondo — a versão com
+   rótulo (.theme-toggle) segue em uso em clientes.html/Flowchart.html. */
+.theme-toggle-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
     background: var(--surface);
     border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 9px 16px 9px 14px;
+    border-radius: 50%;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 16px;
+    box-shadow: var(--shadow);
+    transition: background 0.2s, border-color 0.2s;
+}
+.theme-toggle-btn:hover { background: var(--surface-hover); }
+
+/* Menu "⋮" do cabeçalho: agrupa Área ADM / trocar tipo / sair / excluir dados
+   num único botão, pra essas ações pararem de disputar espaço com o título. */
+.header-menu { position: relative; }
+.header-menu-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 15px;
     color: var(--text-dark);
     box-shadow: var(--shadow);
-    font-family: inherit;
-    white-space: nowrap;
     transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
-.btn-back-gate:hover { background: var(--surface-hover); }
-
-.top-wizard { display: flex; justify-content: space-between; position: relative; margin-bottom: 18px; padding: 0 20px; }
-.top-wizard::before {
-    content: '';
-    position: absolute;
-    top: 15px; left: 40px; right: 40px;
-    height: 2px;
-    background-image: linear-gradient(90deg, var(--border-color-strong) 0 6px, transparent 6px 12px);
-    background-size: 12px 2px;
-    background-repeat: repeat-x;
-    z-index: 1;
+.header-menu-trigger:hover,
+.header-menu-trigger[aria-expanded="true"] {
+    background: var(--surface-hover);
+    border-color: var(--primary-blue);
+    color: var(--primary-blue);
 }
+.header-menu-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 240px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-strong);
+    padding: 6px;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+}
+.header-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-dark);
+    text-decoration: none;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.header-menu-item:hover { background: var(--surface-hover); }
+.header-menu-item i { width: 16px; text-align: center; color: var(--text-muted); }
+.header-menu-item-danger, .header-menu-item-danger i { color: var(--danger); }
+.header-menu-item-danger:hover { background: var(--danger-tint); }
+.header-menu-divider { height: 1px; background: var(--border-color); margin: 4px 6px; }
 
 /* ================= Step Toolbar (Conceito / Modelos / Dicas / Anexos) ================= */
 /* Subtítulo do cabeçalho: define expectativa de tempo/esforço */
@@ -395,26 +498,6 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 
 /* Grupo de ações do cabeçalho (tema + reiniciar) */
 .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-/* Botão de reinício: visível mas não ameaçador — perigo está no confirm() */
-.btn-reset-header {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 16px;
-    border-radius: var(--radius);
-    border: 1.5px solid var(--danger);
-    background: transparent;
-    color: var(--danger);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.18s, color 0.18s;
-    white-space: nowrap;
-    font-family: inherit;
-}
-.btn-reset-header:hover { background: var(--danger-tint); }
-[data-theme="dark"] .btn-reset-header { border-color: var(--danger); color: var(--danger); }
 
 /* Cabeçalho da etapa: título/descrição à esquerda, ajuda ao lado */
 .step-header {
@@ -557,20 +640,6 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
     flex-shrink: 0;
 }
 .attach-list-empty { font-size: 12px; color: var(--text-muted); text-align: center; padding: 6px 0 0; }
-.wizard-step { display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2; position: relative; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; }
-.wizard-step .circle { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 2px solid var(--border-color); display: flex; justify-content: center; align-items: center; font-weight: bold; transition: 0.3s; }
-/* Passo atual: preenchido + pulso sutil, como um indicador de mensagem chegando */
-.wizard-step.active .circle { border-color: var(--primary-blue); background: var(--primary-blue); color: var(--white); animation: wizardPulse 2s ease-out infinite; }
-/* Passo concluído: check estilo "mensagem entregue" no verde do WhatsApp — a cor do produto final */
-.wizard-step.completed .circle { border-color: var(--wa-green); background: var(--wa-green); color: transparent; }
-.wizard-step.completed .circle i { display: none; }
-.wizard-step.completed .circle::after { content: '✓'; color: var(--white); font-size: 14px; }
-@keyframes wizardPulse {
-    0%   { box-shadow: 0 0 0 0 var(--accent-tint-15); }
-    70%  { box-shadow: 0 0 0 8px rgba(0,0,0,0); }
-    100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
-}
-
 /* Form Card */
 .form-card { background: var(--surface); border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); margin-bottom: 80px; }
 /* Card entrance — added by JS on step change */
@@ -1080,8 +1149,7 @@ select.form-control {
 .draft-status { font-size: 12px; color: var(--text-muted); }
 
 /* Navegação por teclado nos passos */
-.sidebar-menu li:focus-visible,
-.wizard-step:focus-visible { outline: 2px solid var(--action-orange); outline-offset: 2px; }
+.sidebar-menu li:focus-visible { outline: 2px solid var(--action-orange); outline-offset: 2px; }
 .step-title:focus { outline: none; }
 
 /* Respeita usuários que preferem menos movimento */
@@ -1257,7 +1325,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     .sidebar-bot, .sidebar-progress { display: none; }
     .logo-btn { display: none; }
     .bottom-nav { left: 80px; }
-    .top-wizard { display: none; }
 }
 @media (max-width: 768px) {
     .sidebar { display: none; }
@@ -2171,21 +2238,3 @@ body.auth-page {
 .admin-header-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .admin-card { max-width: 100%; text-align: left; }
 .admin-card .auth-title, .admin-card .auth-sub { text-align: left; }
-
-/* Botão "Sair" e link ADM no header do formulário / editor de fluxo */
-.btn-header-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border-color);
-    background: var(--surface);
-    color: var(--text-dark);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    transition: border-color 0.2s ease, color 0.2s ease;
-}
-.btn-header-link:hover { border-color: var(--primary-blue); color: var(--primary-blue); }

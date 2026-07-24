@@ -42,15 +42,6 @@ function initOnboardingGate(user) {
     telefoniaBtn.addEventListener('click', () => {
         if (message) message.hidden = false;
     });
-
-    const backBtn = document.getElementById('btnBackToGate');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            localStorage.removeItem(STORAGE.ONBOARDING_TYPE);
-            document.documentElement.removeAttribute('data-onboarding');
-            if (message) message.hidden = true;
-        });
-    }
 }
 
 /* ========================= API (backend NestJS) =========================
@@ -194,9 +185,7 @@ function applyTheme(theme) {
     localStorage.setItem(STORAGE.THEME, theme);
 
     const icon = document.querySelector('.theme-toggle-icon');
-    const label = document.querySelector('.theme-toggle-label');
     if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    if (label) label.textContent = theme === 'dark' ? 'Tema claro' : 'Tema escuro';
 }
 
 function toggleTheme() {
@@ -214,7 +203,6 @@ function showStep(step) {
             el.classList.add('hidden');
             el.classList.remove('fade-enter', 'fade-exit');
         });
-        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
 
         const newCard = document.getElementById(`step${step}`);
@@ -224,15 +212,9 @@ function showStep(step) {
             void newCard.offsetWidth;
             newCard.classList.add('fade-enter');
         }
-        const wz = document.querySelector(`.wizard-step[data-step="${step}"]`);
-        if (wz) wz.classList.add('active');
         const li = document.querySelector(`.sidebar-menu li[data-step="${step}"]`);
         if (li) li.classList.add('active');
 
-        document.querySelectorAll('.wizard-step').forEach(el => {
-            const s = parseInt(el.getAttribute('data-step'));
-            el.classList.toggle('completed', completedSteps.has(s));
-        });
         document.querySelectorAll('.sidebar-menu li').forEach(el => {
             const s = parseInt(el.getAttribute('data-step'));
             el.classList.toggle('step-done', completedSteps.has(s) && s !== step);
@@ -375,9 +357,45 @@ async function addAttachments(step, fileList) {
 function updateProgress(step) {
     const done = completedSteps.size;
     const pct = Math.round((done / totalSteps) * 100);
-    document.getElementById('progressFill').style.width = pct + '%';
+    const pie = document.getElementById('progressPie');
+    if (pie) pie.style.setProperty('--pct', pct);
+    document.getElementById('progressPiePct').textContent = `${pct}%`;
     document.getElementById('progressLabel').textContent = `Etapa ${step} de ${totalSteps}`;
     document.getElementById('progressPercent').textContent = `${pct}% concluído`;
+}
+
+/* Tooltip com o resumo da etapa ao passar o mouse — só faz sentido com a
+   sidebar recolhida (só ícone); expandida, o resumo já aparece como texto
+   fixo abaixo do nome de cada etapa (.menu-sub). */
+function setupSidebarTooltips() {
+    const sidebar = document.getElementById('sidebar');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'sidebar-tooltip';
+    document.body.appendChild(tooltip);
+
+    document.querySelectorAll('.sidebar-menu li').forEach(li => {
+        li.addEventListener('mouseenter', () => {
+            if (!sidebar || !sidebar.classList.contains('collapsed')) return;
+            const label = li.querySelector('.menu-label');
+            const sub = li.querySelector('.menu-sub');
+            tooltip.innerHTML = '';
+            if (label) {
+                const strong = document.createElement('strong');
+                strong.textContent = label.textContent;
+                tooltip.appendChild(strong);
+            }
+            if (sub) {
+                const span = document.createElement('span');
+                span.textContent = sub.textContent;
+                tooltip.appendChild(span);
+            }
+            const rect = li.getBoundingClientRect();
+            tooltip.style.top = `${rect.top + rect.height / 2}px`;
+            tooltip.style.left = `${rect.right + 12}px`;
+            tooltip.classList.add('visible');
+        });
+        li.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+    });
 }
 
 /* ========================= Validação ========================= */
@@ -1761,10 +1779,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authUser = await requireAuth();
     if (!authUser) return;
 
-    const adminLink = document.getElementById('adminLink');
-    if (adminLink) adminLink.hidden = authUser.role !== 'super_admin';
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.addEventListener('click', logout);
+
+    // Menu "⋮" do cabeçalho: agrupa as ações menos usadas (ADM, trocar tipo,
+    // sair, excluir dados) pra não disputar espaço com o título da página.
+    const headerMenu = document.getElementById('headerMenu');
+    const headerMenuTrigger = document.getElementById('headerMenuTrigger');
+    const headerMenuPanel = document.getElementById('headerMenuPanel');
+    if (headerMenu && headerMenuTrigger && headerMenuPanel) {
+        const closeHeaderMenu = () => {
+            headerMenuPanel.classList.add('hidden');
+            headerMenuTrigger.setAttribute('aria-expanded', 'false');
+        };
+        headerMenuTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const opening = headerMenuPanel.classList.contains('hidden');
+            headerMenuPanel.classList.toggle('hidden', !opening);
+            headerMenuTrigger.setAttribute('aria-expanded', String(opening));
+        });
+        headerMenuPanel.addEventListener('click', (e) => {
+            if (e.target.closest('.header-menu-item')) closeHeaderMenu();
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#headerMenu')) closeHeaderMenu();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeHeaderMenu();
+        });
+    }
 
     initOnboardingGate(authUser);
 
@@ -1937,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     document.querySelectorAll('.sidebar-menu li').forEach(makeStepNavigable);
-    document.querySelectorAll('.wizard-step').forEach(makeStepNavigable);
+    setupSidebarTooltips();
 
     // Anexos: seleção via clique
     const attachInput = document.getElementById('attachInput');
