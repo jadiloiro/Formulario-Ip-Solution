@@ -1,5 +1,5 @@
 let currentStep = 1;
-const totalSteps = 7;
+const totalSteps = 9;
 const completedSteps = new Set();
 
 /* Chaves de armazenamento centralizadas (evita strings mágicas espalhadas) */
@@ -7,9 +7,26 @@ const STORAGE = {
     STEP: 'currentStep',
     THEME: 'theme',
     DRAFT: 'ipsolution_form_draft',
+    DRAFT_OWNER: 'ipsolution_draft_owner',
     SHARED: 'ipsolution_shared_flow_data',
     ONBOARDING_TYPE: 'ipsolution_onboarding_type'
 };
+
+/* Id do usuário logado nesta página — usado para "carimbar" o rascunho local
+   (ver saveDraftNow/restoreDraft) e impedir que o progresso de um cliente
+   vaze pro próximo login, quando dois clientes usam o mesmo navegador/PC. */
+let currentUserId = null;
+
+/* Limpa todo o estado de rascunho guardado neste navegador (formulário, etapa
+   atual, fluxo do BOT). Usado tanto por "Excluir dados e reiniciar" quanto
+   quando detectamos que o rascunho salvo pertence a outra conta. */
+function clearLocalDraftKeys() {
+    localStorage.removeItem(STORAGE.STEP);
+    localStorage.removeItem(STORAGE.DRAFT);
+    localStorage.removeItem(STORAGE.DRAFT_OWNER);
+    localStorage.removeItem('ipsolution_flow_v2');
+    localStorage.removeItem(STORAGE.SHARED);
+}
 
 /* ========================= Portal de entrada: tipo de onboarding =========================
    Telefonia ainda não existe — só "WhatsApp" desbloqueia o formulário. A escolha fica salva
@@ -42,15 +59,6 @@ function initOnboardingGate(user) {
     telefoniaBtn.addEventListener('click', () => {
         if (message) message.hidden = false;
     });
-
-    const backBtn = document.getElementById('btnBackToGate');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            localStorage.removeItem(STORAGE.ONBOARDING_TYPE);
-            document.documentElement.removeAttribute('data-onboarding');
-            if (message) message.hidden = true;
-        });
-    }
 }
 
 /* ========================= API (backend NestJS) =========================
@@ -161,6 +169,18 @@ const stepHelp = {
         ]
     },
     6: {
+        conceito: "Conexão direta com a API oficial do WhatsApp Business (Meta), sem depender de gateways de terceiros.",
+        dicas: [
+            "Essa etapa ainda está em desenvolvimento — em breve você vai poder configurar a conexão por aqui."
+        ]
+    },
+    7: {
+        conceito: "Modelos de mensagem pré-aprovados pela Meta, usados para envio ativo (notificações, lembretes, confirmações).",
+        dicas: [
+            "Essa etapa ainda está em desenvolvimento — em breve você vai poder criar e gerenciar seus templates por aqui."
+        ]
+    },
+    8: {
         conceito: "Importação da lista de contatos (agenda) que a empresa já possui, para facilitar o início dos atendimentos.",
         dicas: [
             "O arquivo deve estar no formato CSV.",
@@ -168,7 +188,7 @@ const stepHelp = {
             "Nossa equipe pode ajudar a preparar o arquivo se necessário."
         ]
     },
-    7: {
+    9: {
         conceito: "O BOT organiza o fluxo de atendimento automático (URA Digital), direcionando o cliente para a fila certa.",
         dicas: [
             "Descreva o fluxo em etapas numeradas (Ex: 1 - Comercial, 2 - Suporte).",
@@ -177,6 +197,272 @@ const stepHelp = {
         ]
     }
 };
+
+/* ========================= Etapa 7 · Templates =========================
+   Cada card já é o "registro salvo" (nome + categoria + mensagem + botões) —
+   sem sincronização real com a Meta (essa etapa só descreve o que o cliente
+   quer; a aprovação de fato é feita depois pela nossa equipe). */
+let templatesState = [];
+let tplSearchTerm = '';
+
+function tplGenerateId() {
+    return `tpl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/* Substitui {{1}}, {{2}}... pelo conteúdo de exemplo cadastrado (ou mostra o
+   token cru, em laranja, se a variável ainda não tem exemplo definido). */
+function tplRenderBubbleText(mensagem, variaveis) {
+    const safe = escapeHtml(mensagem || '');
+    return safe.replace(/\{\{\s*(\d+)\s*\}\}/g, (match, idx) => {
+        const exemplo = variaveis && variaveis[idx];
+        return `<span class="tpl-wa-var">${escapeHtml(exemplo || match)}</span>`;
+    });
+}
+
+/* Índices de {{N}} usados no texto da mensagem, na ordem em que aparecem, sem repetir */
+function tplExtractVarIndexes(mensagem) {
+    const found = [...(mensagem || '').matchAll(/\{\{\s*(\d+)\s*\}\}/g)].map(m => m[1]);
+    return [...new Set(found)];
+}
+
+function tplBuildButtonsHtml(botoes) {
+    return (botoes || [])
+        .filter(Boolean)
+        .map(label => `<button type="button" class="tpl-wa-button" disabled><i class="fa-solid fa-reply"></i> ${escapeHtml(label)}</button>`)
+        .join('');
+}
+
+function tplBuildCard(tpl) {
+    const card = document.createElement('div');
+    card.className = 'tpl-card';
+    card.dataset.id = tpl.id;
+    card.innerHTML = `
+        <div class="tpl-card-head">
+            <div class="tpl-card-icon"><i class="fa-solid fa-table-cells-large"></i></div>
+            <div class="tpl-card-id">
+                <strong class="tpl-card-name">${escapeHtml(tpl.nome || '(sem nome)')}</strong>
+                <div class="tpl-card-tags">
+                    <span class="tpl-tag tpl-tag-green">Template</span>
+                    <span class="tpl-tag tpl-tag-orange">${escapeHtml(tpl.categoria || 'Utilidade')}</span>
+                </div>
+            </div>
+            <span class="tpl-card-draft-badge" title="Ainda não enviado para aprovação da Meta — isso é feito depois pela nossa equipe">Rascunho</span>
+        </div>
+        <div class="tpl-card-actions">
+            <button type="button" class="tpl-icon-btn" data-action="edit" title="Editar"><i class="fa-solid fa-pen"></i></button>
+            <button type="button" class="tpl-icon-btn" data-action="duplicate" title="Duplicar"><i class="fa-regular fa-copy"></i></button>
+            <button type="button" class="tpl-icon-btn tpl-icon-btn-danger" data-action="delete" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <div class="tpl-card-preview">
+            <div class="tpl-wa-bubble">
+                <div class="tpl-wa-text">${tplRenderBubbleText(tpl.mensagem, tpl.variaveis)}</div>
+                <div class="tpl-wa-meta"><span>14:32</span><span class="tpl-wa-check"><i class="fa-solid fa-check-double"></i></span></div>
+            </div>
+            <div class="tpl-wa-buttons">${tplBuildButtonsHtml(tpl.botoes)}</div>
+        </div>`;
+    return card;
+}
+
+function renderTemplates() {
+    const grid = document.getElementById('tplGrid');
+    const empty = document.getElementById('tplEmpty');
+    const count = document.getElementById('tplCount');
+    if (!grid || !empty || !count) return;
+
+    const term = tplSearchTerm.trim().toLowerCase();
+    const visible = templatesState.filter(t => !term
+        || t.nome.toLowerCase().includes(term)
+        || t.mensagem.toLowerCase().includes(term));
+
+    grid.innerHTML = '';
+    visible.forEach(t => grid.appendChild(tplBuildCard(t)));
+
+    count.textContent = templatesState.length;
+    empty.classList.toggle('hidden', templatesState.length > 0);
+}
+
+let tplFormVariaveis = {};
+let tplVarModalIndex = null;
+
+function tplOpenForm(tpl = null) {
+    const form = document.getElementById('tplForm');
+    if (!form) return;
+    document.getElementById('tplFormTitle').textContent = tpl ? 'Editar template' : 'Novo template';
+    document.getElementById('tplFormEditingId').value = tpl ? tpl.id : '';
+    document.getElementById('tplNomeInput').value = tpl ? tpl.nome : '';
+    document.getElementById('tplCategoriaInput').value = tpl ? tpl.categoria : 'Utilidade';
+    document.getElementById('tplMensagemInput').value = tpl ? tpl.mensagem : '';
+    document.querySelectorAll('.tpl-botao-input').forEach((input, i) => {
+        input.value = (tpl && tpl.botoes && tpl.botoes[i]) || '';
+    });
+    tplFormVariaveis = (tpl && tpl.variaveis) ? { ...tpl.variaveis } : {};
+    form.classList.remove('hidden');
+    tplUpdateFormPreview();
+    tplRenderVarChips();
+    document.getElementById('tplNomeInput').focus();
+}
+
+function tplCloseForm() {
+    const form = document.getElementById('tplForm');
+    if (form) form.classList.add('hidden');
+}
+
+function tplUpdateFormPreview() {
+    const mensagem = (document.getElementById('tplMensagemInput') || {}).value || '';
+    const previewText = document.getElementById('tplFormPreviewText');
+    const previewButtons = document.getElementById('tplFormPreviewButtons');
+    if (previewText) previewText.innerHTML = mensagem ? tplRenderBubbleText(mensagem, tplFormVariaveis) : 'Sua mensagem aparece aqui…';
+    const botoes = Array.from(document.querySelectorAll('.tpl-botao-input')).map(i => i.value.trim());
+    if (previewButtons) previewButtons.innerHTML = tplBuildButtonsHtml(botoes);
+}
+
+/* Chips com as variáveis já usadas no texto — clicar reabre o pop-up pra editar o exemplo */
+function tplRenderVarChips() {
+    const wrap = document.getElementById('tplVarChips');
+    if (!wrap) return;
+    const mensagem = (document.getElementById('tplMensagemInput') || {}).value || '';
+    const indexes = tplExtractVarIndexes(mensagem);
+    wrap.innerHTML = '';
+    indexes.forEach(idx => {
+        const exemplo = tplFormVariaveis[idx];
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'tpl-var-chip';
+        chip.innerHTML = exemplo
+            ? `<strong>{{${idx}}}</strong> → ${escapeHtml(exemplo)}`
+            : `<strong>{{${idx}}}</strong> <em>sem exemplo</em>`;
+        chip.addEventListener('click', () => tplOpenVarModal(idx));
+        wrap.appendChild(chip);
+    });
+}
+
+function tplOpenVarModal(index) {
+    tplVarModalIndex = index;
+    document.getElementById('tplVarModalToken').textContent = `{{${index}}}`;
+    document.getElementById('tplVarModalInput').value = tplFormVariaveis[index] || '';
+    document.getElementById('tplVarModalOverlay').classList.remove('hidden');
+    document.getElementById('tplVarModalInput').focus();
+}
+
+function tplCloseVarModal() {
+    document.getElementById('tplVarModalOverlay').classList.add('hidden');
+    tplVarModalIndex = null;
+}
+
+function tplSaveVarModal() {
+    const value = document.getElementById('tplVarModalInput').value.trim();
+    if (tplVarModalIndex != null) {
+        if (value) tplFormVariaveis[tplVarModalIndex] = value;
+        else delete tplFormVariaveis[tplVarModalIndex];
+    }
+    tplCloseVarModal();
+    tplRenderVarChips();
+    tplUpdateFormPreview();
+}
+
+function tplSaveForm() {
+    const editingId = document.getElementById('tplFormEditingId').value;
+    const nome = document.getElementById('tplNomeInput').value.trim();
+    const mensagem = document.getElementById('tplMensagemInput').value.trim();
+    if (!nome || !mensagem) {
+        showToast('Preencha ao menos o nome e a mensagem do template.', 'error');
+        return;
+    }
+    const categoria = document.getElementById('tplCategoriaInput').value;
+    const botoes = Array.from(document.querySelectorAll('.tpl-botao-input')).map(i => i.value.trim()).filter(Boolean);
+    // Só guarda exemplos de variáveis que ainda aparecem de fato no texto final.
+    const indexesAtuais = tplExtractVarIndexes(mensagem);
+    const variaveis = indexesAtuais.reduce((acc, idx) => {
+        if (tplFormVariaveis[idx]) acc[idx] = tplFormVariaveis[idx];
+        return acc;
+    }, {});
+
+    if (editingId) {
+        const tpl = templatesState.find(t => t.id === editingId);
+        if (tpl) Object.assign(tpl, { nome, categoria, mensagem, botoes, variaveis });
+    } else {
+        templatesState.push({ id: tplGenerateId(), nome, categoria, mensagem, botoes, variaveis });
+    }
+    renderTemplates();
+    tplCloseForm();
+    scheduleDraftSave();
+    showToast('Template salvo.', 'success');
+}
+
+function setupTemplatesStep() {
+    const addBtn = document.getElementById('tplAddBtn');
+    const cancelBtn = document.getElementById('tplCancelBtn');
+    const saveBtn = document.getElementById('tplSaveBtn');
+    const grid = document.getElementById('tplGrid');
+    const searchInput = document.getElementById('tplSearchInput');
+    const mensagemInput = document.getElementById('tplMensagemInput');
+    const addVarBtn = document.getElementById('tplAddVarBtn');
+    const varModalOverlay = document.getElementById('tplVarModalOverlay');
+    const varModalCancel = document.getElementById('tplVarModalCancel');
+    const varModalSave = document.getElementById('tplVarModalSave');
+    if (!addBtn) return; // etapa não presente nesta página
+
+    addBtn.addEventListener('click', () => tplOpenForm());
+    cancelBtn.addEventListener('click', tplCloseForm);
+    saveBtn.addEventListener('click', tplSaveForm);
+    mensagemInput.addEventListener('input', () => {
+        tplUpdateFormPreview();
+        tplRenderVarChips();
+    });
+    document.querySelectorAll('.tpl-botao-input').forEach(input => input.addEventListener('input', tplUpdateFormPreview));
+    searchInput.addEventListener('input', () => {
+        tplSearchTerm = searchInput.value;
+        renderTemplates();
+    });
+    grid.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const card = btn.closest('.tpl-card');
+        const tpl = templatesState.find(t => t.id === card.dataset.id);
+        if (!tpl) return;
+        if (btn.dataset.action === 'edit') {
+            tplOpenForm(tpl);
+        } else if (btn.dataset.action === 'duplicate') {
+            templatesState.push({ ...tpl, id: tplGenerateId(), nome: `${tpl.nome}_copia`, botoes: [...tpl.botoes], variaveis: { ...tpl.variaveis } });
+            renderTemplates();
+            scheduleDraftSave();
+        } else if (btn.dataset.action === 'delete') {
+            templatesState = templatesState.filter(t => t.id !== tpl.id);
+            renderTemplates();
+            scheduleDraftSave();
+        }
+    });
+
+    // Botão "+ Adicionar variável": insere {{N}} na posição do cursor e já
+    // abre o pop-up pedindo o conteúdo de exemplo daquele número.
+    addVarBtn.addEventListener('click', () => {
+        const indexes = tplExtractVarIndexes(mensagemInput.value).map(Number);
+        const nextIndex = (indexes.length ? Math.max(...indexes) : 0) + 1;
+        const token = `{{${nextIndex}}}`;
+        const start = mensagemInput.selectionStart ?? mensagemInput.value.length;
+        const end = mensagemInput.selectionEnd ?? mensagemInput.value.length;
+        mensagemInput.value = mensagemInput.value.slice(0, start) + token + mensagemInput.value.slice(end);
+        const newPos = start + token.length;
+        mensagemInput.focus();
+        mensagemInput.setSelectionRange(newPos, newPos);
+        tplUpdateFormPreview();
+        tplRenderVarChips();
+        tplOpenVarModal(String(nextIndex));
+    });
+    varModalCancel.addEventListener('click', tplCloseVarModal);
+    varModalSave.addEventListener('click', tplSaveVarModal);
+    varModalOverlay.addEventListener('click', (e) => {
+        if (e.target === varModalOverlay) tplCloseVarModal();
+    });
+    document.getElementById('tplVarModalInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') tplSaveVarModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !varModalOverlay.classList.contains('hidden')) tplCloseVarModal();
+    });
+
+    renderTemplates();
+}
 
 /* ========================= Toasts ========================= */
 function showToast(message, type = 'info') {
@@ -194,9 +480,7 @@ function applyTheme(theme) {
     localStorage.setItem(STORAGE.THEME, theme);
 
     const icon = document.querySelector('.theme-toggle-icon');
-    const label = document.querySelector('.theme-toggle-label');
     if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    if (label) label.textContent = theme === 'dark' ? 'Tema claro' : 'Tema escuro';
 }
 
 function toggleTheme() {
@@ -214,7 +498,6 @@ function showStep(step) {
             el.classList.add('hidden');
             el.classList.remove('fade-enter', 'fade-exit');
         });
-        document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
 
         const newCard = document.getElementById(`step${step}`);
@@ -224,15 +507,9 @@ function showStep(step) {
             void newCard.offsetWidth;
             newCard.classList.add('fade-enter');
         }
-        const wz = document.querySelector(`.wizard-step[data-step="${step}"]`);
-        if (wz) wz.classList.add('active');
         const li = document.querySelector(`.sidebar-menu li[data-step="${step}"]`);
         if (li) li.classList.add('active');
 
-        document.querySelectorAll('.wizard-step').forEach(el => {
-            const s = parseInt(el.getAttribute('data-step'));
-            el.classList.toggle('completed', completedSteps.has(s));
-        });
         document.querySelectorAll('.sidebar-menu li').forEach(el => {
             const s = parseInt(el.getAttribute('data-step'));
             el.classList.toggle('step-done', completedSteps.has(s) && s !== step);
@@ -372,62 +649,74 @@ async function addAttachments(step, fileList) {
     if (ok < files.length) showToast(`${files.length - ok} arquivo(s) falharam ao enviar.`, 'error');
 }
 
-/* ========================= Etapa 6: dropzone do CSV de contatos ========================= */
-function showCsvFile(name) {
-    const chip = document.getElementById('csvFileChip');
-    const label = document.getElementById('csvFileName');
-    if (!chip || !label) return;
-    label.textContent = name;
-    label.title = name;
-    chip.classList.remove('hidden');
-}
-
-function clearCsvFile() {
-    const input = document.getElementById('agendaCsvInput');
-    const chip = document.getElementById('csvFileChip');
-    const label = document.getElementById('csvFileName');
-    if (input) input.value = '';
-    if (label) label.textContent = '';
-    if (chip) chip.classList.add('hidden');
-    scheduleDraftSave();
-}
-
-function setupCsvDropzone() {
-    const zone = document.getElementById('csvDropzone');
-    const input = document.getElementById('agendaCsvInput');
-    const removeBtn = document.getElementById('csvFileRemove');
-    if (!zone || !input) return;
-
-    input.addEventListener('change', () => {
-        if (input.files.length > 0) {
-            showCsvFile(input.files[0].name);
-            scheduleDraftSave();
-        }
-    });
-
-    ['dragenter', 'dragover'].forEach(evt => {
-        zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.add('dragover'); });
-    });
-    ['dragleave', 'drop'].forEach(evt => {
-        zone.addEventListener(evt, (e) => { e.preventDefault(); zone.classList.remove('dragover'); });
-    });
-    zone.addEventListener('drop', (e) => {
-        if (e.dataTransfer.files.length > 0) {
-            input.files = e.dataTransfer.files;
-            showCsvFile(input.files[0].name);
-            scheduleDraftSave();
-        }
-    });
-
-    if (removeBtn) removeBtn.addEventListener('click', (e) => { e.preventDefault(); clearCsvFile(); });
-}
-
 function updateProgress(step) {
     const done = completedSteps.size;
     const pct = Math.round((done / totalSteps) * 100);
-    document.getElementById('progressFill').style.width = pct + '%';
+    const pie = document.getElementById('progressPie');
+    if (pie) pie.style.setProperty('--pct', pct);
+    document.getElementById('progressPiePct').textContent = `${pct}%`;
     document.getElementById('progressLabel').textContent = `Etapa ${step} de ${totalSteps}`;
     document.getElementById('progressPercent').textContent = `${pct}% concluído`;
+}
+
+/* Tooltip com o resumo da etapa ao passar o mouse — só faz sentido com a
+   sidebar recolhida (só ícone); expandida, o resumo já aparece como texto
+   fixo abaixo do nome de cada etapa (.menu-sub). */
+function setupSidebarTooltips() {
+    const sidebar = document.getElementById('sidebar');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'sidebar-tooltip';
+    document.body.appendChild(tooltip);
+
+    document.querySelectorAll('.sidebar-menu li').forEach(li => {
+        li.addEventListener('mouseenter', () => {
+            if (!sidebar || !sidebar.classList.contains('collapsed')) return;
+            const label = li.querySelector('.menu-label');
+            const sub = li.querySelector('.menu-sub');
+            tooltip.innerHTML = '';
+            if (label) {
+                const strong = document.createElement('strong');
+                strong.textContent = label.textContent;
+                tooltip.appendChild(strong);
+            }
+            if (sub) {
+                const span = document.createElement('span');
+                span.textContent = sub.textContent;
+                tooltip.appendChild(span);
+            }
+            const rect = li.getBoundingClientRect();
+            tooltip.style.top = `${rect.top + rect.height / 2}px`;
+            tooltip.style.left = `${rect.right + 12}px`;
+            tooltip.classList.add('visible');
+        });
+        li.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+    });
+
+    // Mesmo tooltip pro gráfico de pizza — recolhida, ele perde o rótulo de texto ao lado
+    const progressEl = document.querySelector('.sidebar-progress');
+    if (progressEl) {
+        progressEl.addEventListener('mouseenter', () => {
+            if (!sidebar || !sidebar.classList.contains('collapsed')) return;
+            const label = document.getElementById('progressLabel');
+            const percent = document.getElementById('progressPercent');
+            tooltip.innerHTML = '';
+            if (label) {
+                const strong = document.createElement('strong');
+                strong.textContent = label.textContent;
+                tooltip.appendChild(strong);
+            }
+            if (percent) {
+                const span = document.createElement('span');
+                span.textContent = percent.textContent;
+                tooltip.appendChild(span);
+            }
+            const rect = progressEl.getBoundingClientRect();
+            tooltip.style.top = `${rect.top + rect.height / 2}px`;
+            tooltip.style.left = `${rect.right + 12}px`;
+            tooltip.classList.add('visible');
+        });
+        progressEl.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+    }
 }
 
 /* ========================= Validação ========================= */
@@ -523,10 +812,7 @@ function resetAllData() {
     if (!ok) return;
 
     // Armazenamento
-    localStorage.removeItem(STORAGE.STEP);
-    localStorage.removeItem(STORAGE.DRAFT);
-    localStorage.removeItem('ipsolution_flow_v2');
-    localStorage.removeItem(STORAGE.SHARED);
+    clearLocalDraftKeys();
 
     // Campos e estado
     currentStep = 1;
@@ -574,8 +860,8 @@ function resetAllData() {
 const jadiboTipIndex = {};
 
 const STEP_NOMES = {
-    1: 'Filas', 2: 'Agentes', 3: 'Horários', 4: 'Configurações',
-    5: 'Números', 6: 'Agenda', 7: 'BOT'
+    1: 'Filas', 2: 'Agentes', 3: 'Horários', 4: 'Configurações', 5: 'Números',
+    6: 'API Oficial', 7: 'Templates', 8: 'Agenda', 9: 'BOT'
 };
 
 function jadiboSetIntro() {
@@ -866,7 +1152,7 @@ function updateFilasDropdowns() {
         if (filas.includes(currentVal)) select.value = currentVal;
     });
 
-    // Atualiza os <select> de fila de destino das opções do menu do BOT (Passo 7)
+    // Atualiza os <select> de fila de destino das opções do menu do BOT (Passo 9)
     document.querySelectorAll('.opcao-fila').forEach(select => {
         const currentVal = select.value;
         select.innerHTML = '<option value="">Selecione a fila</option>';
@@ -1457,11 +1743,10 @@ function collectDraft() {
             ura: getRadio('ura'),
             uraResponsavel: (document.getElementById('uraResponsavel') || {}).value || ''
         },
-        agenda: {
-            // O navegador não permite restaurar o arquivo em si (só o nome fica salvo no rascunho)
-            csvNome: (document.getElementById('csvFileName') || {}).textContent || ''
-        },
-        // O fluxo do BOT é editado visualmente no Passo 7 (motor Drawflow) e persistido
+        // Templates: mantidos em memória (templatesState), não em inputs soltos no DOM
+        // — cada card já É o registro salvo, ver renderTemplates()/saveTemplateFromForm().
+        templates: { itens: templatesState },
+        // O fluxo do BOT é editado visualmente no Passo 9 (motor Drawflow) e persistido
         // em localStorage pelo próprio editor — lemos daqui para o PDF refletir o que
         // o usuário realmente montou no quadro (e não um formulário legado escondido).
         bot: {
@@ -1481,6 +1766,7 @@ function saveDraftNow() {
     try {
         const draft = collectDraft();
         localStorage.setItem(STORAGE.DRAFT, JSON.stringify(draft));
+        if (currentUserId) localStorage.setItem(STORAGE.DRAFT_OWNER, currentUserId);
         pushDraftToApi(draft); // backup no servidor quando a API está no ar
         const now = new Date();
         const hh = String(now.getHours()).padStart(2, '0');
@@ -1507,6 +1793,15 @@ function ensureRowCount(tbody, count, addFn) {
 }
 
 function restoreDraft() {
+    // Rascunho carimbado com outro usuário (ou sem carimbo, de antes desta checagem
+    // existir) — não é seguro assumir que é deste cliente. Descarta em vez de aplicar
+    // um progresso que pode ser de outra conta que usou este navegador antes.
+    const savedOwner = localStorage.getItem(STORAGE.DRAFT_OWNER);
+    if (localStorage.getItem(STORAGE.DRAFT) && savedOwner !== currentUserId) {
+        clearLocalDraftKeys();
+        return false;
+    }
+
     let draft;
     try {
         const raw = localStorage.getItem(STORAGE.DRAFT);
@@ -1605,12 +1900,13 @@ function restoreDraft() {
         toggleField('uraResponsavelWrap', draft.numeros.ura === 'sim');
     }
 
-    // Passo 6 — Agenda (o arquivo em si não é restaurável pelo navegador, só o nome salvo)
-    if (draft.agenda && draft.agenda.csvNome) {
-        showCsvFile(draft.agenda.csvNome);
+    // Passo 7 — Templates
+    if (draft.templates && Array.isArray(draft.templates.itens)) {
+        templatesState = draft.templates.itens;
+        renderTemplates();
     }
 
-    // Passo 7 — BOT
+    // Passo 9 — BOT
     if (draft.bot) {
         const msg = document.getElementById('botMensagemInicial');
         if (msg && draft.bot.mensagemInicial) msg.value = draft.bot.mensagemInicial;
@@ -1819,11 +2115,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     // e a página (oculta desde o <head>) nunca chega a ser revelada.
     const authUser = await requireAuth();
     if (!authUser) return;
+    currentUserId = authUser.id;
 
-    const adminLink = document.getElementById('adminLink');
-    if (adminLink) adminLink.hidden = authUser.role !== 'super_admin';
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.addEventListener('click', logout);
+
+    // Menu "⋮" do cabeçalho: agrupa as ações menos usadas (ADM, trocar tipo,
+    // sair, excluir dados) pra não disputar espaço com o título da página.
+    const headerMenu = document.getElementById('headerMenu');
+    const headerMenuTrigger = document.getElementById('headerMenuTrigger');
+    const headerMenuPanel = document.getElementById('headerMenuPanel');
+    if (headerMenu && headerMenuTrigger && headerMenuPanel) {
+        const closeHeaderMenu = () => {
+            headerMenuPanel.classList.add('hidden');
+            headerMenuTrigger.setAttribute('aria-expanded', 'false');
+        };
+        headerMenuTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const opening = headerMenuPanel.classList.contains('hidden');
+            headerMenuPanel.classList.toggle('hidden', !opening);
+            headerMenuTrigger.setAttribute('aria-expanded', String(opening));
+        });
+        headerMenuPanel.addEventListener('click', (e) => {
+            if (e.target.closest('.header-menu-item')) closeHeaderMenu();
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#headerMenu')) closeHeaderMenu();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeHeaderMenu();
+        });
+    }
 
     initOnboardingGate(authUser);
 
@@ -1842,6 +2164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupStep4Interactions();
     setupConfigAccordion();
     cfg4InitInteractions(); // sub-passos + prévia em tempo real
+    setupTemplatesStep(); // Passo 7 — precisa existir antes de restoreDraft popular templatesState
     document.getElementById('addRespostaBtn').addEventListener('click', () => addRespostaRow());
     document.getElementById('respostasTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-delete');
@@ -1963,7 +2286,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         agentesTableBody.addEventListener('change', () => renderFlowPreview());
     }
 
-    // Opções do menu do BOT (Passo 7)
+    // Opções do menu do BOT (Passo 9)
     const botOpcoesTableBody = document.getElementById('botOpcoesTableBody');
     if (botOpcoesTableBody) {
         botOpcoesTableBody.addEventListener('input', () => renderFlowPreview());
@@ -1996,7 +2319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     document.querySelectorAll('.sidebar-menu li').forEach(makeStepNavigable);
-    document.querySelectorAll('.wizard-step').forEach(makeStepNavigable);
+    setupSidebarTooltips();
 
     // Anexos: seleção via clique
     const attachInput = document.getElementById('attachInput');
@@ -2031,9 +2354,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Etapa 6 · Agenda: dropzone do CSV (clique ou arrastar-e-soltar)
-    setupCsvDropzone();
-
     // Fecha os dropdowns de multi-select ao clicar fora
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.multi-select')) closeAllMultiSelects();
@@ -2041,7 +2361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* ==============================================================
-   Editor de Fluxo EMBUTIDO no Passo 7 (motor: Drawflow via CDN)
+   Editor de Fluxo EMBUTIDO no Passo 9 (motor: Drawflow via CDN)
    Lê filas/agentes/horários/mensagem direto do formulário (mesma página).
    ============================================================== */
 

@@ -9,3 +9,6 @@ backend/data/*.db-journal
 backend/.env
 backend/resumo_implantacao.pdf
 backend/erro-gerar-pdf.png
+backend/playwright-report/
+backend/test-results/
+backend/tests/.auth/

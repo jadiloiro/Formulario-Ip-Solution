@@ -77,5 +77,16 @@ async function logout() {
         await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) { /* mesmo se a rede falhar, limpa o lado do cliente */ }
     clearAuthUser();
+    clearLocalOnboardingDraft();
     window.location.href = 'login.html';
+}
+
+/* O rascunho do onboarding (script.js: STORAGE.DRAFT e afins) fica em localStorage,
+   que não é isolado por sessão — se outro cliente logar neste mesmo navegador antes
+   de o dono voltar, ele herdaria esse progresso. Limpa tudo no logout para que a
+   próxima conta a logar aqui sempre comece do zero (restoreDraft também confere um
+   carimbo de dono como segunda camada, para o caso de a sessão expirar sem "Sair"). */
+function clearLocalOnboardingDraft() {
+    ['currentStep', 'ipsolution_form_draft', 'ipsolution_draft_owner', 'ipsolution_flow_v2', 'ipsolution_shared_flow_data']
+        .forEach(key => localStorage.removeItem(key));
 }

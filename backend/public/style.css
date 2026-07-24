@@ -211,8 +211,12 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .sidebar.collapsed .menu-text,
 .sidebar.collapsed .menu-sub,
 .sidebar.collapsed .menu-label,
-.sidebar.collapsed .sidebar-progress-wrap,
 .sidebar.collapsed .sidebar-bot { display: none; }
+/* Recolhida: mantém só o gráfico de pizza (sem rótulo), centralizado no lugar do ícone */
+.sidebar.collapsed .sidebar-progress { justify-content: center; margin: 10px 0; padding: 0; }
+.sidebar.collapsed .sidebar-progress-label { display: none; }
+.sidebar.collapsed .progress-pie { width: 34px; height: 34px; }
+.sidebar.collapsed .progress-pie-pct { font-size: 8.5px; }
 .sidebar.collapsed .sidebar-menu li { justify-content: center; padding: 12px 0; }
 .sidebar.collapsed .menu-icon { margin: 0; font-size: 17px; }
 .sidebar.collapsed .logo-btn .logo-text { display: none; }
@@ -264,8 +268,19 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .sidebar-toggle:hover { background: var(--surface-hover); color: var(--primary-blue); }
 .sidebar-toggle i { transition: transform 0.25s ease; }
 
-/* Menu Lateral */
-.sidebar-menu { list-style: none; }
+/* flex:1 + min-height:0 fazem a lista ocupar só o espaço sobrando e rolar
+   internamente quando as 9 etapas não cabem — assim progresso e Jadibô
+   (fora desta lista, abaixo) ficam sempre 100% visíveis, sem precisar rolar. */
+.sidebar-menu {
+    list-style: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+}
+.sidebar-menu::-webkit-scrollbar { width: 5px; }
+.sidebar-menu::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 .sidebar-menu li {
     padding: 10px 12px;
     margin-bottom: 4px;
@@ -298,15 +313,69 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .menu-label { font-size: 13px; font-weight: 600; line-height: 1.2; }
 .menu-sub   { font-size: 10.5px; opacity: 0.7; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; }
 
-/* Barra de progresso geral */
-.sidebar-progress { margin: 10px 0 20px; }
-.sidebar-progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-.progress-track { width: 100%; height: 6px; background: var(--bg-light); border-radius: 4px; overflow: hidden; }
-.progress-fill { height: 100%; width: 14%; background: linear-gradient(90deg, var(--primary-blue), var(--action-orange)); border-radius: 4px; transition: width 0.35s ease; }
+/* Tooltip flutuante com o resumo da etapa (sidebar recolhida — ver setupSidebarTooltips) */
+.sidebar-tooltip {
+    position: fixed;
+    transform: translateY(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-dark);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-strong);
+    font-size: 12.5px;
+    line-height: 1.4;
+    max-width: 220px;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sidebar-tooltip.visible { opacity: 1; visibility: visible; }
+.sidebar-tooltip strong { font-weight: 700; color: var(--primary-blue); }
+.sidebar-tooltip span { color: var(--text-muted); }
+
+/* Progresso geral: gráfico de pizza (donut) + legenda em texto */
+.sidebar-progress { margin: 10px 0 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.progress-pie {
+    --pct: 0;
+    position: relative;
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary-blue) calc(var(--pct) * 1%), var(--bg-light) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.5s ease;
+}
+.progress-pie::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    background: var(--surface);
+}
+.progress-pie-pct {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--primary-blue);
+}
+.sidebar-progress-label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text-muted); min-width: 0; }
+.sidebar-progress-label #progressLabel { font-size: 12.5px; font-weight: 600; color: var(--text-dark); }
 
 /* Jadibô Sidebar */
 .sidebar-bot {
     margin-top: auto;
+    flex-shrink: 0;
     padding: 15px;
     background: var(--bg-light);
     border: 1px solid var(--border-color);
@@ -357,36 +426,86 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .theme-toggle:hover { background: var(--surface-hover); }
 .theme-toggle-icon { font-size: 15px; line-height: 1; }
 
-.btn-back-gate {
+/* Botão de tema no cabeçalho do onboarding: ícone só, redondo — a versão com
+   rótulo (.theme-toggle) segue em uso em clientes.html/Flowchart.html. */
+.theme-toggle-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
     background: var(--surface);
     border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 9px 16px 9px 14px;
+    border-radius: 50%;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 16px;
+    box-shadow: var(--shadow);
+    transition: background 0.2s, border-color 0.2s;
+}
+.theme-toggle-btn:hover { background: var(--surface-hover); }
+
+/* Menu "⋮" do cabeçalho: agrupa Área ADM / trocar tipo / sair / excluir dados
+   num único botão, pra essas ações pararem de disputar espaço com o título. */
+.header-menu { position: relative; }
+.header-menu-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 15px;
     color: var(--text-dark);
     box-shadow: var(--shadow);
-    font-family: inherit;
-    white-space: nowrap;
     transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
-.btn-back-gate:hover { background: var(--surface-hover); }
-
-.top-wizard { display: flex; justify-content: space-between; position: relative; margin-bottom: 18px; padding: 0 20px; }
-.top-wizard::before {
-    content: '';
-    position: absolute;
-    top: 15px; left: 40px; right: 40px;
-    height: 2px;
-    background-image: linear-gradient(90deg, var(--border-color-strong) 0 6px, transparent 6px 12px);
-    background-size: 12px 2px;
-    background-repeat: repeat-x;
-    z-index: 1;
+.header-menu-trigger:hover,
+.header-menu-trigger[aria-expanded="true"] {
+    background: var(--surface-hover);
+    border-color: var(--primary-blue);
+    color: var(--primary-blue);
 }
+.header-menu-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 240px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-strong);
+    padding: 6px;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+}
+.header-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-dark);
+    text-decoration: none;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.header-menu-item:hover { background: var(--surface-hover); }
+.header-menu-item i { width: 16px; text-align: center; color: var(--text-muted); }
+.header-menu-item-danger, .header-menu-item-danger i { color: var(--danger); }
+.header-menu-item-danger:hover { background: var(--danger-tint); }
+.header-menu-divider { height: 1px; background: var(--border-color); margin: 4px 6px; }
 
 /* ================= Step Toolbar (Conceito / Modelos / Dicas / Anexos) ================= */
 /* Subtítulo do cabeçalho: define expectativa de tempo/esforço */
@@ -395,26 +514,6 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 
 /* Grupo de ações do cabeçalho (tema + reiniciar) */
 .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-/* Botão de reinício: visível mas não ameaçador — perigo está no confirm() */
-.btn-reset-header {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 16px;
-    border-radius: var(--radius);
-    border: 1.5px solid var(--danger);
-    background: transparent;
-    color: var(--danger);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.18s, color 0.18s;
-    white-space: nowrap;
-    font-family: inherit;
-}
-.btn-reset-header:hover { background: var(--danger-tint); }
-[data-theme="dark"] .btn-reset-header { border-color: var(--danger); color: var(--danger); }
 
 /* Cabeçalho da etapa: título/descrição à esquerda, ajuda ao lado */
 .step-header {
@@ -557,20 +656,6 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
     flex-shrink: 0;
 }
 .attach-list-empty { font-size: 12px; color: var(--text-muted); text-align: center; padding: 6px 0 0; }
-.wizard-step { display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2; position: relative; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; }
-.wizard-step .circle { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 2px solid var(--border-color); display: flex; justify-content: center; align-items: center; font-weight: bold; transition: 0.3s; }
-/* Passo atual: preenchido + pulso sutil, como um indicador de mensagem chegando */
-.wizard-step.active .circle { border-color: var(--primary-blue); background: var(--primary-blue); color: var(--white); animation: wizardPulse 2s ease-out infinite; }
-/* Passo concluído: check estilo "mensagem entregue" no verde do WhatsApp — a cor do produto final */
-.wizard-step.completed .circle { border-color: var(--wa-green); background: var(--wa-green); color: transparent; }
-.wizard-step.completed .circle i { display: none; }
-.wizard-step.completed .circle::after { content: '✓'; color: var(--white); font-size: 14px; }
-@keyframes wizardPulse {
-    0%   { box-shadow: 0 0 0 0 var(--accent-tint-15); }
-    70%  { box-shadow: 0 0 0 8px rgba(0,0,0,0); }
-    100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
-}
-
 /* Form Card */
 .form-card { background: var(--surface); border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); margin-bottom: 80px; }
 /* Card entrance — added by JS on step change */
@@ -578,6 +663,220 @@ body { background-color: var(--bg-light); display: flex; min-height: 100vh; colo
 .form-card.fade-exit  { animation: fadeOut 0.2s ease forwards; }
 .step-title { font-family: var(--font-display); font-size: 23px; font-weight: 600; letter-spacing: -0.01em; color: var(--primary-blue); margin-bottom: 5px; }
 .step-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+
+/* Etapas ainda não implementadas (API Oficial, Templates) */
+.step-coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    padding: 60px 24px;
+}
+.step-coming-soon-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--accent-tint-08);
+    color: var(--primary-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+.step-coming-soon-badge {
+    display: inline-block;
+    background: var(--action-orange);
+    color: var(--white);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+.step-coming-soon-text { max-width: 420px; font-size: 13.5px; line-height: 1.6; color: var(--text-muted); }
+
+/* ================= Etapa 7 · Templates ================= */
+.tpl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.tpl-stat { display: flex; align-items: baseline; gap: 6px; }
+.tpl-stat-num { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--primary-blue); }
+.tpl-stat-label { font-size: 12.5px; color: var(--text-muted); }
+.tpl-toolbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tpl-search-wrap { position: relative; }
+.tpl-search-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-muted); }
+.tpl-search-wrap input { padding: 9px 12px 9px 32px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--surface); color: var(--text-dark); font-size: 13px; width: 220px; }
+.tpl-search-wrap input:focus { outline: none; border-color: var(--primary-blue); }
+.tpl-toolbar-actions .tpl-add-btn { width: auto; white-space: nowrap; margin-bottom: 0; padding: 10px 18px; }
+
+/* Formulário de criação/edição */
+.tpl-form {
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+.tpl-form-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--primary-blue); margin-bottom: 14px; }
+.tpl-form-body { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: start; }
+.tpl-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.tpl-botoes-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tpl-form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.tpl-form-preview { position: sticky; top: 0; }
+.tpl-form-preview-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+
+/* Botão "+ Adicionar variável" + chips das variáveis já usadas na mensagem */
+.tpl-var-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.tpl-add-var-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--action-orange);
+    color: var(--white);
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.15s;
+}
+.tpl-add-var-btn:hover { background: var(--action-orange-dark); transform: translateY(-1px); }
+.tpl-var-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tpl-var-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11.5px;
+    color: var(--text-dark);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.tpl-var-chip:hover { border-color: var(--primary-blue); background: var(--surface-hover); }
+.tpl-var-chip strong { color: var(--action-orange); font-family: var(--font-mono); }
+.tpl-var-chip em { color: var(--text-muted); font-style: normal; }
+
+/* Pop-up: conteúdo de exemplo da variável */
+.tpl-var-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    padding: 20px;
+}
+.tpl-var-modal {
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: var(--shadow-strong);
+    padding: 26px 28px;
+    max-width: 420px;
+    width: 100%;
+    animation: fadeIn 0.18s ease both;
+}
+.tpl-var-modal-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--primary-blue); margin: 0 0 8px; }
+.tpl-var-modal-sub { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 18px; }
+.tpl-var-modal-sub strong { color: var(--action-orange); font-family: var(--font-mono); }
+.tpl-var-modal-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--text-dark); margin-bottom: 6px; }
+.tpl-var-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* Grade de cards */
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.tpl-empty { color: var(--text-muted); font-size: 13.5px; font-style: italic; padding: 20px 0; text-align: center; }
+.tpl-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.tpl-card-head { display: flex; align-items: flex-start; gap: 10px; padding: 16px 16px 0; }
+.tpl-card-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--wa-green-tint);
+    color: var(--wa-green-dark);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.tpl-card-id { flex: 1; min-width: 0; }
+.tpl-card-name { display: block; font-size: 14px; font-weight: 700; color: var(--text-dark); word-break: break-word; }
+.tpl-card-tags { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+.tpl-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.02em; }
+.tpl-tag-green { background: var(--wa-green-tint); color: var(--wa-green-dark); }
+.tpl-tag-orange { background: var(--accent-tint-08); color: var(--action-orange); }
+.tpl-card-draft-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    padding: 3px 9px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+.tpl-card-actions { display: flex; gap: 4px; padding: 10px 16px; }
+.tpl-icon-btn {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tpl-icon-btn:hover { background: var(--surface-hover); color: var(--primary-blue); border-color: var(--primary-blue); }
+.tpl-icon-btn-danger:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-tint); }
+.tpl-card-preview { background: var(--bg-light); padding: 14px 16px 16px; margin-top: auto; }
+
+/* Bolha de mensagem estilo WhatsApp (mesma linguagem visual da prévia da Etapa 4) */
+.tpl-wa-bubble {
+    background: #dcf8c6;
+    border-radius: 10px 10px 2px 10px;
+    padding: 9px 12px 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.13);
+}
+[data-theme="dark"] .tpl-wa-bubble { background: #005c4b; }
+.tpl-wa-text { font-size: 13px; line-height: 1.5; color: #111; word-break: break-word; white-space: pre-wrap; }
+[data-theme="dark"] .tpl-wa-text { color: #e9edef; }
+.tpl-wa-var { color: var(--action-orange); font-weight: 700; }
+.tpl-wa-meta { font-size: 10px; color: #8a9499; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
+.tpl-wa-check { color: #53bdeb; font-size: 11px; }
+.tpl-wa-buttons { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.tpl-wa-button {
+    background: var(--surface);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #53bdeb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    cursor: default;
+}
+
+@media (max-width: 768px) {
+    .tpl-form-body { grid-template-columns: 1fr; }
+    .tpl-botoes-inputs { grid-template-columns: 1fr; }
+    .tpl-form-grid { grid-template-columns: 1fr; }
+}
 
 /* Form Elements */
 .form-group { margin-bottom: 20px; }
@@ -991,55 +1290,6 @@ select.form-control {
 .input-icon-wa { color: var(--wa-green-dark); }
 .form-control.has-icon { padding-left: 42px; }
 
-/* ================= Etapa 6 · Dropzone do CSV de contatos ================= */
-.csv-dropzone {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    text-align: center;
-    padding: 28px 16px;
-    border: 1.5px dashed var(--border-color-strong);
-    border-radius: var(--radius);
-    background: var(--bg-light);
-    cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
-}
-.csv-dropzone:hover, .csv-dropzone:focus-within { border-color: var(--primary-blue); background: var(--surface-hover); }
-/* Visualmente oculto mas ainda focável/acessível por teclado e leitor de tela
-   (display:none ou o atributo hidden tirariam o campo da navegação por Tab) */
-.csv-dropzone-input {
-    position: absolute;
-    width: 1px; height: 1px;
-    padding: 0; margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-.csv-dropzone.dragover { border-color: var(--action-orange); background: var(--accent-tint-15); }
-.csv-dropzone-icon { font-size: 26px; color: var(--primary-blue); margin-bottom: 4px; }
-.csv-dropzone-text { font-size: 13.5px; color: var(--text-dark); }
-.csv-dropzone-hint { font-size: 11.5px; color: var(--text-muted); }
-
-.csv-file-chip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-    padding: 9px 12px;
-    background: var(--wa-green-tint);
-    border: 1px solid var(--wa-green);
-    border-radius: var(--radius);
-    font-size: 13px;
-    color: var(--text-dark);
-}
-.csv-file-icon { color: var(--wa-green-dark); font-size: 15px; }
-.csv-file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.csv-file-remove { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 15px; line-height: 1; flex-shrink: 0; }
-.csv-file-remove:hover { color: var(--danger); }
-
 /* ================= Passo 3 · Seletor visual de horários (estilo WhatsApp) ================= */
 .schedule-group-label { display: block; font-weight: 500; margin-bottom: 10px; font-size: 14px; }
 .field-hint { font-size: 12px; color: var(--text-muted); margin: 10px 2px 0; }
@@ -1129,8 +1379,7 @@ select.form-control {
 .draft-status { font-size: 12px; color: var(--text-muted); }
 
 /* Navegação por teclado nos passos */
-.sidebar-menu li:focus-visible,
-.wizard-step:focus-visible { outline: 2px solid var(--action-orange); outline-offset: 2px; }
+.sidebar-menu li:focus-visible { outline: 2px solid var(--action-orange); outline-offset: 2px; }
 .step-title:focus { outline: none; }
 
 /* Respeita usuários que preferem menos movimento */
@@ -1306,7 +1555,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
     .sidebar-bot, .sidebar-progress { display: none; }
     .logo-btn { display: none; }
     .bottom-nav { left: 80px; }
-    .top-wizard { display: none; }
 }
 @media (max-width: 768px) {
     .sidebar { display: none; }
@@ -2220,21 +2468,3 @@ body.auth-page {
 .admin-header-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .admin-card { max-width: 100%; text-align: left; }
 .admin-card .auth-title, .admin-card .auth-sub { text-align: left; }
-
-/* Botão "Sair" e link ADM no header do formulário / editor de fluxo */
-.btn-header-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border-color);
-    background: var(--surface);
-    color: var(--text-dark);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    transition: border-color 0.2s ease, color 0.2s ease;
-}
-.btn-header-link:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
