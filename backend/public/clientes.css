@@ -1,7 +1,7 @@
 /* ==============================================================
    Painel "Clientes" — Área ADM. Mesma paleta/tipografia do resto
    do produto (style.css), com um layout próprio: grade de cartões,
-   cada um com uma "trilha" de 7 etapas que espelha os mesmos ícones
+   cada um com uma "trilha" de etapas que espelha os mesmos ícones
    da sidebar do onboarding — quem já viu o formulário do cliente
    reconhece de cara em que passo ele está.
    ============================================================== */
@@ -209,7 +209,7 @@ body.clientes-page {
 .cli-badge.status-andamento { background: rgba(232,93,4,0.12); color: var(--action-orange); }
 .cli-badge.status-nao_iniciado { background: var(--accent-tint-08); color: var(--text-muted); }
 
-/* ── Trilha das 7 etapas: o elemento-assinatura do painel ── */
+/* ── Trilha das etapas: o elemento-assinatura do painel ── */
 .cli-track { display: flex; align-items: center; }
 .cli-track-step {
     display: flex;
@@ -241,7 +241,7 @@ body.clientes-page {
 }
 .cli-track-step.done .cli-track-line { background: var(--primary-blue); }
 .cli-track-step:last-child .cli-track-line { display: none; }
-.cli-track-caption { font-size: 9px; color: var(--text-muted); text-align: center; line-height: 1.15; max-width: 44px; }
+.cli-track-caption { font-size: 9px; color: var(--text-muted); text-align: center; line-height: 1.15; max-width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cli-track-progress-label {
     font-family: var(--font-mono);
     font-size: 11.5px;

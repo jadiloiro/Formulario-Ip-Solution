@@ -188,9 +188,38 @@ function renderAgenda() {
     container.appendChild(el('p', { class: 'resumo-empty', text: 'Sem campos próprios — o arquivo de contatos anexado (se houver) aparece na seção Anexos, abaixo.' }));
 }
 
+function renderApiOficial() {
+    const container = document.getElementById('secApiOficial');
+    container.appendChild(el('p', { class: 'resumo-empty', text: 'Etapa ainda em desenvolvimento nesta versão do formulário — sem configuração para exibir.' }));
+}
+
+/* Substitui {{1}}, {{2}}... pelo exemplo cadastrado — mesmo padrão da prévia da Etapa 7 (script.js) */
+function tplMensagemHtml(mensagem, variaveis) {
+    return escapeHtml(mensagem || '').replace(/\{\{\s*(\d+)\s*\}\}/g, (m, idx) => {
+        const exemplo = variaveis && variaveis[idx];
+        return `<strong>${escapeHtml(exemplo || m)}</strong>`;
+    });
+}
+
+function renderTemplates(draft) {
+    const container = document.getElementById('secTemplates');
+    const itens = (draft.templates && draft.templates.itens) || [];
+    if (!itens.length) {
+        container.appendChild(el('p', { class: 'resumo-empty', text: 'Nenhum template criado.' }));
+        return;
+    }
+    itens.forEach(t => {
+        container.appendChild(el('div', { class: 'resumo-subtitle', text: `${t.nome} · ${t.categoria}` }));
+        container.appendChild(el('div', { class: 'resumo-msg-block', html: tplMensagemHtml(t.mensagem, t.variaveis) }));
+        if (Array.isArray(t.botoes) && t.botoes.length) {
+            container.appendChild(fieldBlock('Botões de resposta rápida', t.botoes.join('  ·  ')));
+        }
+    });
+}
+
 const STEP_LABELS = {
-    1: 'Filas', 2: 'Agentes', 3: 'Horários', 4: 'Configurações',
-    5: 'Números', 6: 'Agenda', 7: 'BOT',
+    1: 'Filas', 2: 'Agentes', 3: 'Horários', 4: 'Configurações', 5: 'Números',
+    6: 'API Oficial', 7: 'Templates', 8: 'Agenda', 9: 'BOT',
 };
 
 function renderAnexos(attachments, submissionId) {
@@ -298,6 +327,8 @@ async function loadResumo() {
     renderHorarios(draft);
     renderConfig(draft);
     renderNumeros(draft);
+    renderApiOficial();
+    renderTemplates(draft);
     renderAgenda();
     renderBot(draft);
 

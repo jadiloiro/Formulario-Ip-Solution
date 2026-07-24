@@ -108,23 +108,31 @@
                 <div class="menu-text"><span class="menu-label">5. Números</span><span class="menu-sub">WhatsApp da empresa</span></div>
             </li>
             <li data-step="6">
-                <i class="fa-solid fa-address-book menu-icon" aria-hidden="true"></i>
-                <div class="menu-text"><span class="menu-label">6. Agenda</span><span class="menu-sub">Importar contatos</span></div>
+                <i class="fa-solid fa-plug menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">6. API Oficial</span><span class="menu-sub">Conexão direta com a Meta</span></div>
             </li>
             <li data-step="7">
+                <i class="fa-solid fa-file-lines menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">7. Templates</span><span class="menu-sub">Modelos de mensagem</span></div>
+            </li>
+            <li data-step="8">
+                <i class="fa-solid fa-address-book menu-icon" aria-hidden="true"></i>
+                <div class="menu-text"><span class="menu-label">8. Agenda</span><span class="menu-sub">Importar contatos</span></div>
+            </li>
+            <li data-step="9">
                 <i class="fa-solid fa-robot menu-icon" aria-hidden="true"></i>
-                <div class="menu-text"><span class="menu-label">7. BOT</span><span class="menu-sub">Fluxo automático</span></div>
+                <div class="menu-text"><span class="menu-label">9. BOT</span><span class="menu-sub">Fluxo automático</span></div>
             </li>
         </ul>
 
         <!-- Progresso geral: gráfico de pizza (mais compacto que uma barra) -->
         <div class="sidebar-progress">
             <div class="progress-pie" id="progressPie">
-                <span class="progress-pie-pct" id="progressPiePct">14%</span>
+                <span class="progress-pie-pct" id="progressPiePct">0%</span>
             </div>
             <div class="sidebar-progress-label">
-                <span id="progressLabel">Etapa 1 de 7</span>
-                <span id="progressPercent">14% concluído</span>
+                <span id="progressLabel">Etapa 1 de 9</span>
+                <span id="progressPercent">0% concluído</span>
             </div>
         </div>
 
@@ -548,11 +556,109 @@
                 </div>
             </div>
 
-            <!-- STEP 6: AGENDA -->
+            <!-- STEP 6: API OFICIAL (em breve) -->
             <div class="form-card step-content hidden" id="step6">
                 <div class="step-header">
                     <div class="step-header-text">
-                        <h2 class="step-title">6. Agenda</h2>
+                        <h2 class="step-title">6. API Oficial</h2>
+                        <p class="step-desc">Conexão direta com a API oficial do WhatsApp Business (Meta), sem depender de gateways de terceiros.</p>
+                    </div>
+                </div>
+                <div class="step-coming-soon">
+                    <div class="step-coming-soon-icon"><i class="fa-solid fa-plug"></i></div>
+                    <span class="step-coming-soon-badge">Em breve</span>
+                    <p class="step-coming-soon-text">Estamos preparando a configuração da API Oficial por aqui. Em breve você vai poder conectar direto com a Meta nesta etapa.</p>
+                </div>
+            </div>
+
+            <!-- STEP 7: TEMPLATES (em breve) -->
+            <div class="form-card step-content hidden" id="step7">
+                <div class="step-header">
+                    <div class="step-header-text">
+                        <h2 class="step-title">7. Templates</h2>
+                        <p class="step-desc">Modelos de mensagem pré-aprovados para envio ativo (notificações, lembretes, confirmações) pelo WhatsApp. A aprovação junto à Meta é feita depois, pela nossa equipe — aqui você só descreve o que precisa.</p>
+                    </div>
+                </div>
+
+                <div class="tpl-toolbar">
+                    <div class="tpl-stat">
+                        <span class="tpl-stat-num" id="tplCount">0</span>
+                        <span class="tpl-stat-label">modelo(s) criado(s)</span>
+                    </div>
+                    <div class="tpl-toolbar-actions">
+                        <div class="tpl-search-wrap">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="tplSearchInput" placeholder="Buscar por nome ou conteúdo...">
+                        </div>
+                        <button type="button" class="btn-add tpl-add-btn" id="tplAddBtn">+ Adicionar template</button>
+                    </div>
+                </div>
+
+                <!-- Formulário de criação/edição -->
+                <div class="tpl-form hidden" id="tplForm">
+                    <input type="hidden" id="tplFormEditingId">
+                    <h3 class="tpl-form-title" id="tplFormTitle">Novo template</h3>
+                    <div class="tpl-form-body">
+                        <div class="tpl-form-fields">
+                            <div class="tpl-form-grid">
+                                <div class="form-group">
+                                    <label for="tplNomeInput">Nome do template</label>
+                                    <input type="text" id="tplNomeInput" class="form-control" placeholder="Ex: cobranca_sat_v1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="tplCategoriaInput">Categoria (Meta)</label>
+                                    <select id="tplCategoriaInput" class="form-control">
+                                        <option value="Utilidade">Utilidade</option>
+                                        <option value="Marketing">Marketing</option>
+                                        <option value="Autenticação">Autenticação</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="tplMensagemInput">Mensagem</label>
+                                <p class="field-hint">Insira o texto e use o botão abaixo para marcar as partes variáveis (nome do cliente, valor, data, etc.).</p>
+                                <textarea id="tplMensagemInput" class="form-control" rows="4" placeholder="Ex: Olá, {{1}}. Identificamos parcelas em aberto no seu cadastro e queremos ajudar você a regularizar."></textarea>
+                                <div class="tpl-var-toolbar">
+                                    <button type="button" class="tpl-add-var-btn" id="tplAddVarBtn">
+                                        <i class="fa-solid fa-plus"></i> Adicionar variável
+                                    </button>
+                                    <div class="tpl-var-chips" id="tplVarChips"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Botões de resposta rápida (opcional, até 3)</label>
+                                <div class="tpl-botoes-inputs">
+                                    <input type="text" class="form-control tpl-botao-input" placeholder="Ex: Ver parcelas em aberto" maxlength="25">
+                                    <input type="text" class="form-control tpl-botao-input" placeholder="Ex: Falar com suporte" maxlength="25">
+                                    <input type="text" class="form-control tpl-botao-input" placeholder="Botão 3 (opcional)" maxlength="25">
+                                </div>
+                            </div>
+                            <div class="tpl-form-actions">
+                                <button type="button" class="btn btn-outline" id="tplCancelBtn">Cancelar</button>
+                                <button type="button" class="btn btn-primary" id="tplSaveBtn">Salvar template</button>
+                            </div>
+                        </div>
+                        <!-- Prévia ao vivo enquanto o cliente digita -->
+                        <div class="tpl-form-preview">
+                            <span class="tpl-form-preview-label">Prévia</span>
+                            <div class="tpl-wa-bubble">
+                                <div class="tpl-wa-text" id="tplFormPreviewText">Sua mensagem aparece aqui…</div>
+                                <div class="tpl-wa-meta"><span>14:32</span><span class="tpl-wa-check"><i class="fa-solid fa-check-double"></i></span></div>
+                            </div>
+                            <div class="tpl-wa-buttons" id="tplFormPreviewButtons"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tpl-grid" id="tplGrid"></div>
+                <p class="tpl-empty hidden" id="tplEmpty">Nenhum template criado ainda. Clique em "+ Adicionar template" para começar.</p>
+            </div>
+
+            <!-- STEP 8: AGENDA -->
+            <div class="form-card step-content hidden" id="step8">
+                <div class="step-header">
+                    <div class="step-header-text">
+                        <h2 class="step-title">8. Agenda</h2>
                         <p class="step-desc">Sua lista de contatos (clientes, fornecedores, parceiros) para importarmos no sistema e você já começar com tudo à mão.</p>
                     </div>
                 </div>
@@ -562,11 +668,11 @@
                 </div>
             </div>
 
-            <!-- STEP 7: BOT -->
-            <div class="form-card step-content hidden" id="step7">
+            <!-- STEP 9: BOT -->
+            <div class="form-card step-content hidden" id="step9">
                 <div class="step-header">
                     <div class="step-header-text">
-                        <h2 class="step-title">7. BOT</h2>
+                        <h2 class="step-title">9. BOT</h2>
                         <p class="step-desc">Monte o fluxo do seu BOT arrastando os blocos da paleta para o quadro e conectando-os. As filas, agentes e horários cadastrados nas etapas anteriores já aparecem automaticamente.</p>
                     </div>
                 </div>
@@ -639,6 +745,20 @@
 
     <!-- Toasts -->
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Modal: conteúdo de exemplo da variável (Etapa 7 · Templates) -->
+    <div class="tpl-var-modal-overlay hidden" id="tplVarModalOverlay">
+        <div class="tpl-var-modal" role="dialog" aria-modal="true" aria-labelledby="tplVarModalTitle">
+            <h3 class="tpl-var-modal-title" id="tplVarModalTitle">Conteúdo de exemplo</h3>
+            <p class="tpl-var-modal-sub">Esse texto substitui <strong id="tplVarModalToken">{{1}}</strong> na prévia. Não use dados reais de clientes — é só um exemplo para visualização.</p>
+            <label class="tpl-var-modal-label" for="tplVarModalInput">Exemplo</label>
+            <input type="text" id="tplVarModalInput" class="form-control" placeholder="Ex: 10%, João Silva, 22/08...">
+            <div class="tpl-var-modal-actions">
+                <button type="button" class="btn btn-outline" id="tplVarModalCancel">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="tplVarModalSave">Salvar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Jadibô: ícone compacto que abre/fecha painel de dicas ao clicar -->
     <div class="jadibo-wrap" id="jadiboWrap">

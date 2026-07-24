@@ -6,8 +6,10 @@ const STEPS = [
     { n: 3, icon: 'fa-clock', label: 'Horários' },
     { n: 4, icon: 'fa-sliders', label: 'Config.' },
     { n: 5, icon: 'fa-mobile-screen', label: 'Números' },
-    { n: 6, icon: 'fa-address-book', label: 'Agenda' },
-    { n: 7, icon: 'fa-robot', label: 'BOT' },
+    { n: 6, icon: 'fa-plug', label: 'API Of.' },
+    { n: 7, icon: 'fa-file-lines', label: 'Templates' },
+    { n: 8, icon: 'fa-address-book', label: 'Agenda' },
+    { n: 9, icon: 'fa-robot', label: 'BOT' },
 ];
 
 let allClients = [];
@@ -75,7 +77,7 @@ function buildTrack(completedSteps) {
         track.appendChild(stepEl);
     });
     const wrap = el('div', { style: 'display:flex;align-items:center;' }, [track]);
-    wrap.appendChild(el('span', { class: 'cli-track-progress-label', text: `${done.size}/7` }));
+    wrap.appendChild(el('span', { class: 'cli-track-progress-label', text: `${done.size}/${STEPS.length}` }));
     return wrap;
 }
 

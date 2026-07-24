@@ -49,7 +49,7 @@ test.describe('Onboarding — caminho feliz até o resumo final', () => {
     await admin.dispose();
   });
 
-  test('login, troca de senha obrigatória, preenche as 7 etapas e finaliza no resumo', async ({ page }) => {
+  test('login, troca de senha obrigatória, preenche as 9 etapas e finaliza no resumo', async ({ page }) => {
     const novaSenha = 'SenhaNova456';
 
     await page.goto('/login.html');
@@ -82,7 +82,7 @@ test.describe('Onboarding — caminho feliz até o resumo final', () => {
     await page.click('#step2 .step-title'); // fecha o dropdown clicando fora
     await page.click('#btnNext');
 
-    // Etapas 3 a 6 — sem campos obrigatórios.
+    // Etapas 3 e 4 — sem campos obrigatórios.
     await page.waitForSelector('#step3:not(.hidden)');
     await page.click('#btnNext');
 
@@ -93,11 +93,37 @@ test.describe('Onboarding — caminho feliz até o resumo final', () => {
     await page.fill('#numeroPrincipal', '11 98888-7777');
     await page.click('#btnNext');
 
+    // Etapa 6 — API Oficial: só um card "Em breve", sem campos.
     await page.waitForSelector('#step6:not(.hidden)');
+    await expect(page.locator('#step6 .step-coming-soon-badge')).toHaveText('Em breve');
     await page.click('#btnNext');
 
-    // Etapa 7 — BOT: sem bloco obrigatório, finaliza e vai para o resumo.
+    // Etapa 7 — Templates: cria um modelo usando o botão "+ Adicionar variável"
+    // (insere {{1}} e abre o pop-up pedindo o conteúdo de exemplo).
     await page.waitForSelector('#step7:not(.hidden)');
+    await page.click('#tplAddBtn');
+    await page.fill('#tplNomeInput', 'cobranca_sat_v1');
+    await page.selectOption('#tplCategoriaInput', 'Utilidade');
+    await page.fill('#tplMensagemInput', 'Olá, . Identificamos parcelas em aberto no seu cadastro.');
+    await page.click('#tplAddVarBtn');
+    await expect(page.locator('#tplVarModalOverlay')).toBeVisible();
+    await expect(page.locator('#tplVarModalToken')).toHaveText('{{1}}');
+    await page.fill('#tplVarModalInput', '10%');
+    await page.click('#tplVarModalSave');
+    await expect(page.locator('#tplVarModalOverlay')).toBeHidden();
+    await expect(page.locator('#tplFormPreviewText')).toContainText('10%');
+    await page.fill('.tpl-botao-input >> nth=0', 'Ver parcelas em aberto');
+    await page.click('#tplSaveBtn');
+    await expect(page.locator('#tplGrid .tpl-card')).toHaveCount(1);
+    await expect(page.locator('#tplGrid .tpl-card-name')).toHaveText('cobranca_sat_v1');
+    await expect(page.locator('#tplGrid .tpl-wa-var')).toHaveText('10%');
+    await page.click('#btnNext');
+
+    await page.waitForSelector('#step8:not(.hidden)');
+    await page.click('#btnNext');
+
+    // Etapa 9 — BOT: sem bloco obrigatório, finaliza e vai para o resumo.
+    await page.waitForSelector('#step9:not(.hidden)');
     await Promise.all([
       page.waitForURL(/resumo\.html\?id=/),
       page.click('#btnNext'),
@@ -228,8 +254,12 @@ test.describe('Área ADM — status e anexos sobrevivem a reabrir o formulário 
     await page.click('#btnNext');
     await page.waitForSelector('#step6:not(.hidden)');
     await page.click('#btnNext');
-
     await page.waitForSelector('#step7:not(.hidden)');
+    await page.click('#btnNext');
+    await page.waitForSelector('#step8:not(.hidden)');
+    await page.click('#btnNext');
+
+    await page.waitForSelector('#step9:not(.hidden)');
     await Promise.all([
       page.waitForURL(/resumo\.html\?id=/),
       page.click('#btnNext'),
